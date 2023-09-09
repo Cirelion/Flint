@@ -708,7 +708,6 @@ var ModerationCommands = []*commands.YAGCommand{
 				toID = parsed.Switches["to"].Int64()
 			}
 
-
 			// Check if set to break at a certain ID
 			fromID := int64(0)
 			if parsed.Switches["from"].Value != nil {
@@ -716,7 +715,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				fromID = parsed.Switches["from"].Int64()
 			}
 
-			if(toID > 0 && fromID > 0 && fromID < toID){
+			if toID > 0 && fromID > 0 && fromID < toID {
 				return errors.New("from messageID cannot be less than to messageID"), nil
 			}
 
@@ -1212,6 +1211,48 @@ var ModerationCommands = []*commands.YAGCommand{
 			return GenericCmdResp(action, target, 0, true, true), nil
 		},
 	},
+	{
+		CustomEnabled: true,
+		CmdCategory:   commands.CategoryModeration,
+		Name:          "SetSlowmode",
+		Aliases:       []string{"slow", "slowmode", "setslowmode"},
+		Description:   "Sets the slowmode interval in the current channel",
+		RequiredArgs:  1,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "Interval", Help: "The interval of the slowmode", Type: &commands.DurationArg{}},
+			{Name: "Channel", Help: "The channel to set the slowmode in", Type: dcmd.Channel},
+		},
+		RequireDiscordPerms:      []int64{discordgo.PermissionManageChannels},
+		RequiredDiscordPermsHelp: "ManageChannels",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			channelID := parsed.ChannelID
+			interval := parsed.Args[0].Value.(time.Duration)
+			rl := int(interval.Seconds())
+			humanizedInterval := common.HumanizeDuration(common.DurationPrecisionSeconds, interval)
+
+			if c := parsed.Args[1]; c.Value != nil {
+				channelID = c.Value.(*dstate.ChannelState).ID
+			}
+
+			edit := &discordgo.ChannelEdit{
+				RateLimitPerUser: &rl,
+			}
+
+			_, err := common.BotSession.ChannelEditComplex(channelID, edit)
+			if err != nil {
+				return nil, err
+			}
+
+			if rl == 0 {
+				humanizedInterval = "none"
+			}
+
+			return "Slow mode in <#" + strconv.FormatInt(channelID, 10) + "> set to " + humanizedInterval, nil
+		},
+	},
 }
 
 func AdvancedDeleteMessages(guildID, channelID int64, triggerID int64, filterUser int64, regex string, invertRegexMatch bool, toID int64, fromID int64, maxAge time.Duration, minAge time.Duration, pinFilterEnable bool, attachmentFilterEnable bool, deleteNum, fetchNum int) (int, error) {
@@ -1289,7 +1330,7 @@ func AdvancedDeleteMessages(guildID, channelID int64, triggerID int64, filterUse
 
 		// Continue only if current msg ID is > fromID
 		if fromID > 0 && fromID < msgs[i].ID {
-			continue;
+			continue
 		}
 
 		// Continue only if current msg ID is < toID
@@ -1385,7 +1426,7 @@ func PaginateWarnings(parsed *dcmd.Data) func(p *paginatedmessages.PaginatedMess
 					entry_formatted = common.CutStringShort(entry_formatted, 900)
 				}
 				entry_formatted += "\n"
-				purgedWarnLogs := logs.ConfEnableMessageLogPurge.GetBool() && entry.CreatedAt.Before(time.Now().AddDate(0,0,-30))
+				purgedWarnLogs := logs.ConfEnableMessageLogPurge.GetBool() && entry.CreatedAt.Before(time.Now().AddDate(0, 0, -30))
 				if entry.LogsLink != "" && !purgedWarnLogs {
 					entry_formatted += fmt.Sprintf("> logs: [`link`](%s)\n", entry.LogsLink)
 				}
