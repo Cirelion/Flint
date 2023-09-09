@@ -5,7 +5,7 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
 	"github.com/botlabs-gg/yagpdb/v2/commands"
 	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/advice"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/advice"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/allocstat"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/banserver"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/calc"
@@ -17,8 +17,8 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/customembed"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dadjoke"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dcallvoice"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/define"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dictionary"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/define"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/dictionary"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dogfact"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/eightball"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/findserver"
@@ -27,7 +27,7 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/guildunavailable"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/howlongtobeat"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/info"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/inspire"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/inspire"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/invite"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/leaveserver"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/listflags"
@@ -35,7 +35,7 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/memstats"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/ping"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/poll"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/roast"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/roast"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/roll"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/setstatus"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/simpleembed"
@@ -46,15 +46,15 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/toggledbg"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topcommands"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topevents"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topgames"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/topgames"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topic"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topservers"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/topservers"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/unbanserver"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/undelete"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/weather"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/weather"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/wouldyourather"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/xkcd"
+	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/xkcd"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/yagstatus"
 )
 
@@ -80,14 +80,14 @@ func (p *Plugin) AddCommands() {
 		invite.Command,
 
 		// Standard
-		define.Command,
-		weather.Command,
+		//define.Command,
+		//weather.Command,
 		calc.Command,
 		topic.Command,
 		catfact.Command,
 		dadjoke.Command,
 		dogfact.Command,
-		advice.Command,
+		//advice.Command,
 		ping.Command,
 		throw.Command,
 		roll.Command,
@@ -99,13 +99,13 @@ func (p *Plugin) AddCommands() {
 		wouldyourather.Command,
 		poll.Command,
 		undelete.Command,
-		viewperms.Command,
-		topgames.Command,
-		xkcd.Command,
+		//viewperms.Command,
+		//topgames.Command,
+		//xkcd.Command,
 		howlongtobeat.Command,
-		inspire.Command,
+		//inspire.Command,
 		forex.Command,
-		roast.Command,
+		//roast.Command,
 		eightball.Command,
 
 		// Maintenance
@@ -114,7 +114,7 @@ func (p *Plugin) AddCommands() {
 		banserver.Command,
 		allocstat.Command,
 		unbanserver.Command,
-		topservers.Command,
+		//topservers.Command,
 		topcommands.Command,
 		topevents.Command,
 		currentshard.Command,
@@ -132,7 +132,7 @@ func (p *Plugin) AddCommands() {
 	)
 
 	statedbg.Commands()
-	commands.AddRootCommands(p, dictionary.Command)
+	//commands.AddRootCommands(p, dictionary.Command)
 }
 
 func (p *Plugin) BotInit() {

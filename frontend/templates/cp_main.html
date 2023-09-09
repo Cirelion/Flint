@@ -21,17 +21,17 @@
     <meta name="theme-color" content="#ffffff">
 
     <!-- More meta stuff -->
-    <meta name="apple-mobile-web-app-title" content="YAGPDB">
-    <meta name="application-name" content="YAGPDB">
+    <meta name="apple-mobile-web-app-title" content="Flint">
+    <meta name="application-name" content="Flint">
     <meta name="msapplication-config" content="/static/icons/browserconfig.xml">
     <meta name="theme-color" content="#ffffff">
 
-    <meta property="og:title" content="YAGPDB" />
-    <meta property="og:description" content="Yet Another General Purpose Discord Bot" />
+    <meta property="og:title" content="Flint" />
+    <meta property="og:description" content="A Discord bot for unhinged.AI" />
 
-    <title>YAGPDB - Control Panel{{if .ActiveGuild}} | {{.ActiveGuild.Name}}{{end}}</title>
-    <meta name="keywords" content="YAGPDB Discord bot control panel" />
-    <meta name="description" content="YAGPDB - Yet Another General Purpose Discord Bot">
+    <title>Flint - Control Panel{{if .ActiveGuild}} | {{.ActiveGuild.Name}}{{end}}</title>
+    <meta name="keywords" content="Flint Discord bot control panel" />
+    <meta name="description" content="Flint - A Discord bot for unhinged.AI">
     <meta name="author" content="jonas747">
 
     <!-- Web Fonts  -->
@@ -107,11 +107,11 @@
     </div>
 
     <script>
-    var visibleURL;
-    {{if .VisibleURL }}visibleURL = {{.VisibleURL}};{{end}}
-    {{if .ActiveGuild}}
-    var CURRENT_GUILDID="{{.ActiveGuild.ID}}";
-    {{end}}
+        var visibleURL;
+        {{if .VisibleURL }}visibleURL = {{.VisibleURL}};{{end}}
+        {{if .ActiveGuild}}
+        var CURRENT_GUILDID="{{.ActiveGuild.ID}}";
+        {{end}}
     </script>
 
     <!-- Vendor -->
@@ -156,16 +156,16 @@
 {{/*Displays alerts*/}}
 {{define "cp_alerts"}}
 <script>
-$(function(){
-    showAlerts("{{json .Alerts}}");
-    $.getJSON("https://srhpyqt94yxb.statuspage.io/api/v2/incidents/unresolved.json", function(data) {
-        if (data.incidents) {
-            data.incidents.forEach(function(incident) {
-                const incidentLink = `<a href="${incident.shortlink}" target="_blank">${incident.name}</a>`
-                addAlertHTML("warning", `Discord's ${incident.status} an incident: ${incidentLink}. Functionality may be limited.`);
-            })
-        }
-    });
+    $(function(){
+        showAlerts("{{json .Alerts}}");
+        $.getJSON("https://srhpyqt94yxb.statuspage.io/api/v2/incidents/unresolved.json", function(data) {
+            if (data.incidents) {
+                data.incidents.forEach(function(incident) {
+                    const incidentLink = `<a href="${incident.shortlink}" target="_blank">${incident.name}</a>`
+                    addAlertHTML("warning", `Discord's ${incident.status} an incident: ${incidentLink}. Functionality may be limited.`);
+                })
+            }
+        });
 
     {{if .ActiveGuild}}
         async function runShardOfflineChecker() {
@@ -228,9 +228,9 @@ $(function(){
 {{/*Help block for templating*/}}
 {{define "template_help"}}
 <p class="mb-0">To include the user or server in the message you can use the template data included.<br/>
-Some quick examples: <code>{{"{{"}}.User.Username{{"}}"}}</code> - will be replaced by username, <code>{{"{{"}}.Server.Name{{"}}"}}</code> - will be replaced by server name, <code>{{"{{"}}.User.ID{{"}}"}}</code> - the user's id and so on...<br/>
-For example, to mention a user, you would do <code><@{{"{{"}}.User.ID{{"}}"}}></code>.<br/>
-<a href="https://docs.yagpdb.xyz" target="_blank">See the documentation for more details</a>
+    Some quick examples: <code>{{"{{"}}.User.Username{{"}}"}}</code> - will be replaced by username, <code>{{"{{"}}.Server.Name{{"}}"}}</code> - will be replaced by server name, <code>{{"{{"}}.User.ID{{"}}"}}</code> - the user's id and so on...<br/>
+    For example, to mention a user, you would do <code><@{{"{{"}}.User.ID{{"}}"}}></code>.<br/>
+    <a href="https://docs.yagpdb.xyz" target="_blank">See the documentation for more details</a>
 </p>
 {{end}}
 

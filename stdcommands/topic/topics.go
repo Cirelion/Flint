@@ -621,4 +621,5 @@ var ChatTopics = []string{
 	"What feature do you wish discord had?",
 	"When do you think voice calls in the discord android app is no longer gonna break every 10 minutes?",
 	"jonas",
+	"Screw your -topic, I am not listening to your puny command, Flint superiority!",
 }
