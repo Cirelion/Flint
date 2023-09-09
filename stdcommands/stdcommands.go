@@ -5,6 +5,8 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
 	"github.com/botlabs-gg/yagpdb/v2/commands"
 	"github.com/botlabs-gg/yagpdb/v2/common"
+	"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
+
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/advice"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/allocstat"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/banserver"
@@ -51,7 +53,6 @@ import (
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/topservers"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/unbanserver"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/undelete"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/weather"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/wouldyourather"
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/xkcd"
@@ -99,7 +100,7 @@ func (p *Plugin) AddCommands() {
 		wouldyourather.Command,
 		poll.Command,
 		undelete.Command,
-		//viewperms.Command,
+		viewperms.Command,
 		//topgames.Command,
 		//xkcd.Command,
 		howlongtobeat.Command,
