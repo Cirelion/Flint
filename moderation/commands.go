@@ -2,6 +2,7 @@ package moderation
 
 import (
 	"fmt"
+	"github.com/botlabs-gg/yagpdb/v2/common/templates"
 	"regexp"
 	"strconv"
 	"strings"
@@ -1215,7 +1216,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		CustomEnabled: true,
 		CmdCategory:   commands.CategoryModeration,
 		Name:          "SetSlowmode",
-		Aliases:       []string{"slow", "slowmode", "setslowmode"},
+		Aliases:       []string{"slow", "setslow", "slowmode"},
 		Description:   "Sets the slowmode interval in the current channel",
 		RequiredArgs:  1,
 		Arguments: []*dcmd.ArgDef{
@@ -1227,6 +1228,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			channelID := parsed.ChannelID
 			interval := parsed.Args[0].Value.(time.Duration)
@@ -1251,6 +1253,31 @@ var ModerationCommands = []*commands.YAGCommand{
 			}
 
 			return "Slow mode in <#" + strconv.FormatInt(channelID, 10) + "> set to " + humanizedInterval, nil
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "GetSlowmode",
+		Aliases:                  []string{"getslow"},
+		Description:              "Gets the slowmode interval in the current channel",
+		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			channel, err := common.BotSession.Channel(parsed.ChannelID)
+
+			if err != nil {
+				return nil, err
+			}
+
+			time := strconv.FormatInt(int64(channel.RateLimitPerUser), 10)
+			seconds := strings.Join([]string{time, "s"}, "")
+
+			return templates.ToDuration(seconds).String(), nil
 		},
 	},
 }
