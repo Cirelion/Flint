@@ -135,6 +135,62 @@ func (w *WarningModel) TableName() string {
 	return "moderation_warnings"
 }
 
+type WatchList struct {
+	UserID   uint64 `gorm:"primary_key"`
+	GuildID  int64  `gorm:"index"`
+	AuthorID string
+
+	LogsLink          string
+	MessageID         int64
+	Reason            string
+	HeadModeratorNote string
+	Feuds             []Feud          `gorm:"foreignKey:WatchListID;references:UserID"`
+	VerbalWarnings    []VerbalWarning `gorm:"foreignKey:WatchListID;references:UserID"`
+	Pingable          bool            `gorm:"default:false"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	LastPingedAt      time.Time
+}
+
+func (w *WatchList) TableName() string {
+	return "moderation_watchlist"
+}
+
+type Feud struct {
+	ID          uint  `gorm:"primary_key"`
+	GuildID     int64 `gorm:"index"`
+	AuthorID    int64
+	WatchListID uint64
+
+	FeudingUserName string
+	Reason          string
+	MessageLink     string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (f *Feud) TableName() string {
+	return "moderation_watchlist_feuds"
+}
+
+type VerbalWarning struct {
+	ID          uint  `gorm:"primary_key"`
+	GuildID     int64 `gorm:"index"`
+	WatchListID uint64
+
+	AuthorID    int64
+	Reason      string
+	MessageLink string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (f *VerbalWarning) TableName() string {
+	return "moderation_watchlist_verbal_warnings"
+}
+
 type MuteModel struct {
 	common.SmallModel
 

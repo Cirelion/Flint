@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/botlabs-gg/yagpdb/v2/analytics"
 	"github.com/botlabs-gg/yagpdb/v2/antiphishing"
+	"github.com/botlabs-gg/yagpdb/v2/autorole"
 	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
 	"github.com/botlabs-gg/yagpdb/v2/common/prom"
 	"github.com/botlabs-gg/yagpdb/v2/common/run"
@@ -72,7 +73,7 @@ func main() {
 	automod_legacy.RegisterPlugin()
 	automod.RegisterPlugin()
 	logs.RegisterPlugin()
-	//autorole.RegisterPlugin()
+	autorole.RegisterPlugin()
 	//reminders.RegisterPlugin()
 	//soundboard.RegisterPlugin()
 	//youtube.RegisterPlugin()
