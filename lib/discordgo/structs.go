@@ -1324,6 +1324,7 @@ type InviteUser struct {
 
 type CreateApplicationCommandRequest struct {
 	Name              string                      `json:"name"`                         // 1-32 character name matching ^[\w-]{1,32}$
+	Type              ApplicationCommandType      `json:"type,omitempty"`               // Sets application command type, defaults to 1 (slash command)
 	Description       string                      `json:"description"`                  // 1-100 character description
 	Options           []*ApplicationCommandOption `json:"options"`                      // the parameters for the command
 	DefaultPermission *bool                       `json:"default_permission,omitempty"` // (default true)	whether the command is enabled by default when the app is added to a guild
