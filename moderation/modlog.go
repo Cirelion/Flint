@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/botlabs-gg/yagpdb/v2/common"
 	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
@@ -40,51 +41,43 @@ var (
 	MAClearWarnings  = ModlogAction{Prefix: "Cleared warnings", Emoji: "👌", Color: 0x62c65f}
 )
 
-func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogAction, target *discordgo.User, reason, logLink string) error {
+func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target *discordgo.User, reason string, duration time.Duration, logLink string) *discordgo.MessageEmbed {
+	embed := &discordgo.MessageEmbed{
+		Title: fmt.Sprintf("User %s", action.Prefix),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: discordgo.EndpointUserAvatar(target.ID, target.Avatar),
+		},
+		Color:       action.Color,
+		Description: fmt.Sprintf(">>> **User:** %s (%d)\n**Reason:** %s", target.Mention(), target.ID, reason),
+		Timestamp:   time.Now().Format(time.RFC3339),
+	}
+
+	if duration > 0 {
+		embed.Description = embed.Description + fmt.Sprintf("\n**Duration:** %s", common.HumanizeDuration(common.DurationPrecisionMinutes, duration))
+	}
+
+	if logLink != "" {
+		embed.URL = logLink
+	}
+
+	if !author.Bot {
+		embed.Footer = &discordgo.MessageEmbedFooter{
+			Text:    fmt.Sprintf("Action taken by %s", author.Globalname),
+			IconURL: discordgo.EndpointUserAvatar(author.ID, author.Avatar),
+		}
+	}
+
+	return embed
+}
+
+func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogAction, target *discordgo.User, reason, logLink string, duration time.Duration) error {
 	channelID := config.IntActionChannel()
 	config.GetGuildID()
 	if channelID == 0 {
 		return nil
 	}
-
-	emptyAuthor := false
-	if author == nil {
-		emptyAuthor = true
-		author = &discordgo.User{
-			ID:            0,
-			Username:      "Unknown",
-			Discriminator: "????",
-		}
-	}
-
-	if reason == "" {
-		reason = "(no reason specified)"
-	}
-
-	embed := &discordgo.MessageEmbed{
-		Author: &discordgo.MessageEmbedAuthor{
-			Name:    fmt.Sprintf("%s (ID %d)", author.String(), author.ID),
-			IconURL: discordgo.EndpointUserAvatar(author.ID, author.Avatar),
-		},
-		Thumbnail: &discordgo.MessageEmbedThumbnail{
-			URL: discordgo.EndpointUserAvatar(target.ID, target.Avatar),
-		},
-		Color: action.Color,
-		Description: fmt.Sprintf("**%s%s** %s *(ID %d)*\n📄**Reason:** %s",
-			action.Emoji, action.Prefix, target.String(), target.ID, reason),
-	}
-
-	if logLink != "" {
-		embed.Description += " ([Logs](" + logLink + "))"
-	}
-
-	if action.Footer != "" {
-		embed.Footer = &discordgo.MessageEmbedFooter{
-			Text: action.Footer,
-		}
-	}
-
-	m, err := common.BotSession.ChannelMessageSendEmbed(channelID, embed)
+	embed := generateGenericModEmbed(action, author, target, reason, duration, logLink)
+	_, err := common.BotSession.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
 		if common.IsDiscordErr(err, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions, discordgo.ErrCodeUnknownChannel) {
 			// disable the modlog
@@ -95,11 +88,6 @@ func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogActi
 		return err
 	}
 
-	if emptyAuthor {
-		placeholder := fmt.Sprintf("Assign an author and reason to this using **`reason %d your-reason-here`**", m.ID)
-		updateEmbedReason(nil, placeholder, embed)
-		_, err = common.BotSession.ChannelMessageEditEmbed(channelID, m.ID, embed)
-	}
 	return err
 }
 

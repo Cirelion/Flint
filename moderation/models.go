@@ -135,21 +135,93 @@ func (w *WarningModel) TableName() string {
 	return "moderation_warnings"
 }
 
+type ModLog struct {
+	UserID  uint64 `gorm:"primary_key"`
+	GuildID int64  `gorm:"index"`
+
+	Warns []Warn `gorm:"foreignKey:ModLogID;references:UserID"`
+	Mutes []Mute `gorm:"foreignKey:ModLogID;references:UserID"`
+	Kicks []Kick `gorm:"foreignKey:ModLogID;references:UserID"`
+	Bans  []Ban  `gorm:"foreignKey:ModLogID;references:UserID"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (w *ModLog) TableName() string {
+	return "mod_logs"
+}
+
+type Warn struct {
+	ID       uint `gorm:"primary_key"`
+	ModLogID uint64
+	AuthorID string
+
+	Reason  string
+	LogLink string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Mute struct {
+	ID       uint `gorm:"primary_key"`
+	ModLogID uint64
+	AuthorID string
+
+	Reason   string
+	Duration time.Duration
+	LogLink  string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Kick struct {
+	ID       uint `gorm:"primary_key"`
+	ModLogID uint64
+	AuthorID string
+
+	Reason  string
+	LogLink string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Ban struct {
+	ID       uint `gorm:"primary_key"`
+	ModLogID uint64
+	AuthorID string
+
+	Reason   string
+	Duration time.Duration
+	LogLink  string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (w *Warn) TableName() string {
+	return "mod_log_warns"
+}
+
 type WatchList struct {
 	UserID   uint64 `gorm:"primary_key"`
 	GuildID  int64  `gorm:"index"`
 	AuthorID string
 
-	LogsLink          string
 	MessageID         int64
 	Reason            string
 	HeadModeratorNote string
 	Feuds             []Feud          `gorm:"foreignKey:WatchListID;references:UserID"`
 	VerbalWarnings    []VerbalWarning `gorm:"foreignKey:WatchListID;references:UserID"`
-	Pingable          bool            `gorm:"default:false"`
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	LastPingedAt      time.Time
+
+	Pingable     bool `gorm:"default:false"`
+	LastPingedAt time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (w *WatchList) TableName() string {

@@ -1,9 +1,6 @@
 package moderation
 
 import (
-	"bytes"
-	"context"
-	"database/sql"
 	"emperror.dev/errors"
 	"fmt"
 	"github.com/botlabs-gg/yagpdb/v2/analytics"
@@ -13,16 +10,12 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/common"
 	"github.com/botlabs-gg/yagpdb/v2/common/scheduledevents2"
 	"github.com/botlabs-gg/yagpdb/v2/common/templates"
-	"github.com/botlabs-gg/yagpdb/v2/customcommands/models"
 	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
 	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
 	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
-	"github.com/botlabs-gg/yagpdb/v2/logs"
 	"github.com/botlabs-gg/yagpdb/v2/web"
-	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack"
-	"github.com/volatiletech/sqlboiler/queries/qm"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,6 +37,16 @@ type LightDBEntry struct {
 	User discordgo.User
 
 	ExpiresAt time.Time
+}
+
+type ModLogEntry struct {
+	ID       uint64
+	Type     string
+	Author   discordgo.User
+	Reason   string
+	LogLink  string
+	Duration time.Duration
+	GivenAt  time.Time
 }
 
 func MBaseCmd(cmdData *dcmd.Data, targetID int64) (config *Config, targetUser *discordgo.User, err error) {
@@ -173,7 +176,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:          "Ban",
 		Aliases:       []string{"banid"},
 		Description:   "Bans a member, specify number of days of messages to delete with -ddays (0 to 7)",
-		RequiredArgs:  1,
+		RequiredArgs:  3,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Duration", Type: &commands.DurationArg{}, Default: time.Duration(0)},
@@ -184,7 +187,6 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RequiredDiscordPermsHelp: "BanMembers or ManageServer",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionAdministrator}, {discordgo.PermissionManageServer}, {discordgo.PermissionBanMembers}},
-		ArgumentCombos:           [][]int{{0, 1, 2}, {0, 2, 1}, {0, 1}, {0, 2}, {0}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
@@ -224,7 +226,14 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return GenericCmdResp(MABanned, target, banDuration, true, false), nil
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return generateGenericModEmbed(MABanned, parsed.Author, target, reason, banDuration, ""), nil
 		},
 	},
 	{
@@ -233,7 +242,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:          "Unban",
 		Aliases:       []string{"unbanid"},
 		Description:   "Unbans a user. Reason requirement is same as ban command setting.",
-		RequiredArgs:  1,
+		RequiredArgs:  2,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Reason", Type: dcmd.String},
@@ -274,7 +283,14 @@ var ModerationCommands = []*commands.YAGCommand{
 				return "User is not banned!", nil
 			}
 
-			return GenericCmdResp(MAUnbanned, target, 0, true, true), nil
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return generateGenericModEmbed(MAUnbanned, parsed.Author, target, reason, 0, ""), nil
 		},
 	},
 	{
@@ -282,7 +298,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		CmdCategory:   commands.CategoryModeration,
 		Name:          "Kick",
 		Description:   "Kicks a member",
-		RequiredArgs:  1,
+		RequiredArgs:  2,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Reason", Type: dcmd.String},
@@ -335,7 +351,14 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return GenericCmdResp(MAKick, target, 0, true, true), nil
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return generateGenericModEmbed(MAKick, parsed.Author, target, reason, -1, ""), nil
 		},
 	},
 	{
@@ -343,6 +366,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		CmdCategory:   commands.CategoryModeration,
 		Name:          "Mute",
 		Description:   "Mutes a member",
+		RequiredArgs:  3,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Duration", Type: &commands.DurationArg{}},
@@ -350,7 +374,6 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RequiredDiscordPermsHelp: "KickMembers or ManageServer",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionAdministrator}, {discordgo.PermissionManageServer}, {discordgo.PermissionManageRoles}},
-		ArgumentCombos:           [][]int{{0, 1, 2}, {0, 2, 1}, {0, 1}, {0, 2}, {0}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
@@ -394,8 +417,15 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			common.BotSession.GuildMemberMove(parsed.GuildData.GS.ID, target.ID, 0)
-			return GenericCmdResp(MAMute, target, d, true, false), nil
+			return generateGenericModEmbed(MAMute, parsed.Author, target, reason, d, ""), nil
 		},
 	},
 	{
@@ -403,7 +433,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		CmdCategory:   commands.CategoryModeration,
 		Name:          "Unmute",
 		Description:   "Unmutes a member",
-		RequiredArgs:  1,
+		RequiredArgs:  2,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Reason", Type: dcmd.String},
@@ -438,12 +468,19 @@ var ModerationCommands = []*commands.YAGCommand{
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
 			}
-			err = MuteUnmuteUser(config, false, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, member, 0)
+			err = MuteUnmuteUser(config, false, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, member, -1)
 			if err != nil {
 				return nil, err
 			}
 
-			return GenericCmdResp(MAUnmute, target, 0, false, true), nil
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return generateGenericModEmbed(MAUnmute, parsed.Author, target, reason, -1, ""), nil
 		},
 	},
 	{
@@ -452,6 +489,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:          "Timeout",
 		Description:   "Timeout a member",
 		Aliases:       []string{"to"},
+		RequiredArgs:  3,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Duration", Type: &commands.DurationArg{}},
@@ -459,7 +497,6 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RequiredDiscordPermsHelp: "TimeoutMembers/ModerateMembers or ManageServer",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionAdministrator}, {discordgo.PermissionManageServer}, {discordgo.PermissionModerateMembers}},
-		ArgumentCombos:           [][]int{{0, 1, 2}, {0, 2, 1}, {0, 1}, {0, 2}, {0}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
@@ -499,7 +536,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return GenericCmdResp(MATimeoutAdded, target, d, true, false), nil
+			return generateGenericModEmbed(MATimeoutAdded, parsed.Author, target, reason, d, ""), nil
 		},
 	}, {
 		CustomEnabled: true,
@@ -507,7 +544,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:          "RemoveTimeout",
 		Aliases:       []string{"untimeout", "cleartimeout", "deltimeout", "rto"},
 		Description:   "Removes a member's timeout",
-		RequiredArgs:  1,
+		RequiredArgs:  2,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Type: dcmd.UserID},
 			{Name: "Reason", Type: dcmd.String},
@@ -544,7 +581,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return GenericCmdResp(MATimeoutRemoved, target, 0, false, true), nil
+			return generateGenericModEmbed(MATimeoutRemoved, parsed.Author, target, reason, -1, ""), nil
 		},
 	},
 	{
@@ -776,58 +813,15 @@ var ModerationCommands = []*commands.YAGCommand{
 			if numDeleted == 1 {
 				deleteMessageWord = "message"
 			}
+
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			return dcmd.NewTemporaryResponse(time.Second*5, fmt.Sprintf("Deleted %d %s! :')", numDeleted, deleteMessageWord), true), err
-		},
-	},
-	{
-		CustomEnabled: true,
-		CmdCategory:   commands.CategoryModeration,
-		Name:          "Reason",
-		Description:   "Add/Edit a modlog reason",
-		RequiredArgs:  2,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "Message-ID", Type: dcmd.BigInt},
-			{Name: "Reason", Type: dcmd.String},
-		},
-		RequiredDiscordPermsHelp: "KickMembers or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			config, _, err := MBaseCmd(parsed, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionKickMembers, nil, true)
-			if err != nil {
-				return nil, err
-			}
-
-			if config.ActionChannel == "" {
-				return "No mod log channel set up", nil
-			}
-
-			msg, err := common.BotSession.ChannelMessage(config.IntActionChannel(), parsed.Args[0].Int64())
-			if err != nil {
-				return nil, err
-			}
-
-			if msg.Author.ID != common.BotUser.ID {
-				return "I didn't make that message", nil
-			}
-
-			if len(msg.Embeds) < 1 {
-				return "This entry is either too old or you're trying to mess with me...", nil
-			}
-
-			embed := msg.Embeds[0]
-			updateEmbedReason(parsed.Author, parsed.Args[1].Str(), embed)
-			_, err = common.BotSession.ChannelMessageEditEmbed(config.IntActionChannel(), msg.ID, embed)
-			if err != nil {
-				return nil, err
-			}
-
-			return "👌", nil
 		},
 	},
 	{
@@ -868,236 +862,15 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return GenericCmdResp(MAWarned, target, 0, false, true), nil
-		},
-	},
-	{
-		CustomEnabled: true,
-		CmdCategory:   commands.CategoryModeration,
-		Name:          "Warnings",
-		Description:   "Lists warning of a user.",
-		Aliases:       []string{"Warns"},
-		RequiredArgs:  1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "User", Type: dcmd.UserID, Default: 0},
-			{Name: "Page", Type: &dcmd.IntArg{Max: 10000}, Default: 0},
-		},
-		ArgSwitches: []*dcmd.ArgDef{
-			{Name: "id", Help: "Warning ID", Type: dcmd.Int},
-		},
-		RequiredDiscordPermsHelp: "ManageMessages or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			var err error
-			config, _, err := MBaseCmd(parsed, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionManageMessages, config.WarnCmdRoles, true)
-			if err != nil {
-				return nil, err
-			}
-
-			if parsed.Switches["id"].Value != nil {
-				var warn []*WarningModel
-				err = common.GORM.Where("guild_id = ? AND id = ?", parsed.GuildData.GS.ID, parsed.Switches["id"].Int()).First(&warn).Error
-				if err != nil && err != gorm.ErrRecordNotFound {
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
 					return nil, err
 				}
-				if len(warn) == 0 {
-					return fmt.Sprintf("Warning with given id : `%d` does not exist.", parsed.Switches["id"].Int()), nil
-				}
+			}
 
-				return &discordgo.MessageEmbed{
-					Title:       fmt.Sprintf("Warning#%d - User : %s", warn[0].ID, warn[0].UserID),
-					Description: fmt.Sprintf("<t:%d:f> - **Reason** : %s", warn[0].CreatedAt.Unix(), warn[0].Message),
-					Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("By: %s (%13s)", warn[0].AuthorUsernameDiscrim, warn[0].AuthorID)},
-				}, nil
-			}
-			page := parsed.Args[1].Int()
-			if page < 1 {
-				page = 1
-			}
-			if parsed.Context().Value(paginatedmessages.CtxKeyNoPagination) != nil {
-				return PaginateWarnings(parsed)(nil, page)
-			}
-			_, err = paginatedmessages.CreatePaginatedMessage(parsed.GuildData.GS.ID, parsed.GuildData.CS.ID, page, 0, PaginateWarnings(parsed))
-			return nil, err
+			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), 10080*time.Minute, ""), nil
 		},
-	},
-	{
-		CustomEnabled: true,
-		CmdCategory:   commands.CategoryModeration,
-		Name:          "EditWarning",
-		Description:   "Edit a warning, id is the first number of each warning from the warnings command",
-		RequiredArgs:  2,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "Id", Type: dcmd.Int},
-			{Name: "NewMessage", Type: dcmd.String},
-		},
-		RequiredDiscordPermsHelp: "ManageMessages or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			config, _, err := MBaseCmd(parsed, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionManageMessages, config.WarnCmdRoles, config.WarnCommandsEnabled)
-			if err != nil {
-				return nil, err
-			}
-
-			rows := common.GORM.Model(WarningModel{}).Where("guild_id = ? AND id = ?", parsed.GuildData.GS.ID, parsed.Args[0].Int()).Update(
-				"message", fmt.Sprintf("%s (updated by %s (%d))", parsed.Args[1].Str(), parsed.Author.String(), parsed.Author.ID)).RowsAffected
-
-			if rows < 1 {
-				return "Failed updating, most likely couldn't find the warning", nil
-			}
-
-			return "👌", nil
-		},
-	},
-	{
-		CustomEnabled: true,
-		CmdCategory:   commands.CategoryModeration,
-		Name:          "DelWarning",
-		Aliases:       []string{"dw", "delwarn", "deletewarning"},
-		Description:   "Deletes a warning, id is the first number of each warning from the warnings command",
-		RequiredArgs:  1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "Id", Type: dcmd.Int},
-			{Name: "Reason", Type: dcmd.String},
-		},
-		RequiredDiscordPermsHelp: "ManageMessages or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			config, _, err := MBaseCmd(parsed, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionManageMessages, config.WarnCmdRoles, config.WarnCommandsEnabled)
-			if err != nil {
-				return nil, err
-			}
-
-			rows := common.GORM.Where("guild_id = ? AND id = ?", parsed.GuildData.GS.ID, parsed.Args[0].Int()).Delete(WarningModel{}).RowsAffected
-			if rows < 1 {
-				return "Failed deleting, most likely couldn't find the warning", nil
-			}
-
-			return "👌", nil
-		},
-	},
-	{
-		CustomEnabled: true,
-		CmdCategory:   commands.CategoryModeration,
-		Name:          "ClearWarnings",
-		Aliases:       []string{"clw"},
-		Description:   "Clears the warnings of a user",
-		RequiredArgs:  1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "User", Type: dcmd.UserID},
-			{Name: "Reason", Type: dcmd.String},
-		},
-		RequiredDiscordPermsHelp: "ManageMessages or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-
-			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionManageMessages, config.WarnCmdRoles, config.WarnCommandsEnabled)
-			if err != nil {
-				return nil, err
-			}
-
-			rows := common.GORM.Where("guild_id = ? AND user_id = ?", parsed.GuildData.GS.ID, target.ID).Delete(WarningModel{}).RowsAffected
-
-			reason := parsed.Args[1].Str()
-			err = CreateModlogEmbed(config, parsed.Author, MAClearWarnings, target, reason, "")
-			if err != nil {
-				return "failed sending modlog", err
-			}
-
-			return fmt.Sprintf("Deleted %d warnings.", rows), nil
-		},
-	},
-	{
-		CmdCategory: commands.CategoryModeration,
-		Name:        "TopWarnings",
-		Aliases:     []string{"topwarns"},
-		Description: "Shows ranked list of warnings on the server",
-		Arguments: []*dcmd.ArgDef{
-			{Name: "Page", Type: dcmd.Int, Default: 0},
-		},
-		ArgSwitches: []*dcmd.ArgDef{
-			{Name: "id", Help: "List userIDs"},
-		},
-		RequiredDiscordPermsHelp: "ManageMessages or ManageServer",
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           false,
-		RunFunc: paginatedmessages.PaginatedCommand(0, func(parsed *dcmd.Data, p *paginatedmessages.PaginatedMessage, page int) (*discordgo.MessageEmbed, error) {
-
-			showUserIDs := false
-			config, _, err := MBaseCmd(parsed, 0)
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = MBaseCmdSecond(parsed, "", true, discordgo.PermissionManageMessages, config.WarnCmdRoles, true)
-			if err != nil {
-				return nil, err
-			}
-
-			if parsed.Switches["id"].Value != nil && parsed.Switches["id"].Value.(bool) {
-				showUserIDs = true
-			}
-
-			offset := (page - 1) * 15
-			entries, err := TopWarns(parsed.GuildData.GS.ID, offset, 15)
-			if err != nil {
-				return nil, err
-			}
-
-			if len(entries) < 1 && p != nil && p.LastResponse != nil { //Don't send No Results error on first execution.
-				return nil, paginatedmessages.ErrNoResults
-			}
-
-			embed := &discordgo.MessageEmbed{
-				Title: "Ranked list of warnings",
-			}
-
-			out := "```\n# - Warns - User\n"
-			for _, v := range entries {
-				if !showUserIDs {
-					user := v.Username
-					if user == "" {
-						user = "unknown ID:" + strconv.FormatInt(v.UserID, 10)
-					}
-					out += fmt.Sprintf("#%02d: %4d - %s\n", v.Rank, v.WarnCount, user)
-				} else {
-					out += fmt.Sprintf("#%02d: %4d - %d\n", v.Rank, v.WarnCount, v.UserID)
-				}
-			}
-			var count int
-			common.GORM.Table("moderation_warnings").Where("guild_id = ?", parsed.GuildData.GS.ID).Count(&count)
-
-			out += "```\n" + fmt.Sprintf("Total Server Warnings: `%d`", count)
-
-			embed.Description = out
-
-			return embed, nil
-
-		}),
 	},
 	{
 		CustomEnabled: true,
@@ -1170,7 +943,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				if dur > 0 {
 					action.Footer = "Duration: " + common.HumanizeDuration(common.DurationPrecisionMinutes, dur)
 				}
-				CreateModlogEmbed(config, parsed.Author, action, target, "", "")
+				CreateModlogEmbed(config, parsed.Author, action, target, "", "", -1)
 			}
 
 			return GenericCmdResp(action, target, dur, true, dur <= 0), nil
@@ -1228,7 +1001,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			action := MARemoveRole
 			action.Prefix = "Removed the role " + role.Name + " from "
 			if config.GiveRoleCmdModlog && config.IntActionChannel() != 0 {
-				CreateModlogEmbed(config, parsed.Author, action, target, "", "")
+				CreateModlogEmbed(config, parsed.Author, action, target, "", "", -1)
 			}
 
 			return GenericCmdResp(action, target, 0, true, true), nil
@@ -1308,8 +1081,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "AddToWatchList",
 		Aliases:                  []string{"watch", "addwatch", "watchlist", "addwatchlist"},
 		Description:              "Adds user to the watchlist",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1397,8 +1170,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "RemoveFromWatchList",
 		Aliases:                  []string{"rwatch", "removewatch", "rwatchlist", "removewatchlist"},
 		Description:              "Removes user from the watchlist",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1492,8 +1265,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "AddFeud",
 		Aliases:                  []string{"feud"},
 		Description:              "Adds a feud for the watchlisted user",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1580,8 +1353,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "AddVerbalWarning",
 		Aliases:                  []string{"verbalwarning"},
 		Description:              "Adds a verbal warning for the watchlisted user",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1673,8 +1446,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "RefreshWatchList",
 		Aliases:                  []string{"refeshwatch"},
 		Description:              "Refreshes the watchlist entry",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1728,8 +1501,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "ToggleWatchListPing",
 		Aliases:                  []string{"toggleping"},
 		Description:              "Toggles the watchlist ping to on or off",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1789,8 +1562,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Name:                     "PingActiveWatchlistedUser",
 		Aliases:                  []string{"watchlistping"},
 		Description:              "Ping on duty in the watchlist channel",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
 		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
@@ -1843,27 +1616,335 @@ var ModerationCommands = []*commands.YAGCommand{
 			}
 		},
 	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "Logs",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		ContextMenuUser:          true,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			guildID := parsed.GuildData.GS.ID
+			userID := parsed.SlashCommandTriggerData.Interaction.DataCommand.TargetID
+			member, err := bot.GetMember(guildID, userID)
+
+			punishList, err := generatePunishList(guildID, uint64(userID))
+			if err != nil {
+				return nil, err
+			}
+
+			if len(punishList) < 1 {
+				return "User has no log entries.", nil
+			}
+
+			maxPage := int(math.Ceil(float64(len(punishList)) / float64(5)))
+			_, err = paginatedmessages.CreatePaginatedModLogMessage(parsed.Session, parsed.SlashCommandTriggerData.Interaction.Token, parsed.GuildData.GS.ID, parsed.ChannelID, 1, maxPage, func(p *paginatedmessages.PaginatedMessage, page int) (*discordgo.MessageEmbed, error) {
+				return modLogPager(member, p, page, punishList)
+			})
+
+			return nil, err
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "PunishLogs",
+		Aliases:                  []string{"warninfo", "muteinfo", "kickinfo", "baninfo"},
+		Description:              "View punishment info of the user",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RequiredArgs:             1,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "User", Help: "The user you want to see the punishments of", Type: &commands.MemberArg{}},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			guildID := parsed.GuildData.GS.ID
+			userID := parsed.Args[0].User().ID
+
+			member, err := bot.GetMember(guildID, userID)
+			if err != nil {
+				return nil, err
+			}
+
+			punishList, err := generatePunishList(guildID, uint64(userID))
+			if err != nil {
+				return nil, err
+			}
+
+			if len(punishList) < 1 {
+				return "User has no log entries.", nil
+			}
+
+			maxPage := int(math.Ceil(float64(len(punishList)) / float64(5)))
+			_, err = paginatedmessages.CreatePaginatedModLogMessage(parsed.Session, parsed.SlashCommandTriggerData.Interaction.Token, parsed.GuildData.GS.ID, parsed.ChannelID, 1, maxPage, func(p *paginatedmessages.PaginatedMessage, page int) (*discordgo.MessageEmbed, error) {
+				return modLogPager(member, p, page, punishList)
+			})
+
+			if parsed.TriggerType != 3 {
+				err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			return nil, err
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "EditLog",
+		Description:              "Edits a mod log entry of the user",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RequiredArgs:             4,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "User", Help: "The user you want to update the punishments of", Type: &commands.MemberArg{}},
+			{Name: "Type", Help: "The type of punishment (Warn, Mute, Kick, Ban)", Type: dcmd.String},
+			{Name: "ID", Help: "The punishment ID, found in the modLogs", Type: dcmd.Int},
+			{Name: "UpdatedReason", Help: "The update reason for the punishment", Type: dcmd.String},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			userID := parsed.Args[0].User().ID
+			Type := strings.Title(parsed.Args[1].Str())
+			ID := parsed.Args[2].Int()
+			reason := parsed.Args[3].Str()
+
+			if !strings.Contains("WarnMuteKickBan", Type) {
+				return "Incorrect type, must be one of: 'Warn', 'Mute', 'Kick', 'Ban'", nil
+			}
+
+			modLogs := ModLog{UserID: uint64(userID)}
+			var err error
+
+			switch Type {
+			case "Warn":
+				model := Warn{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Warns").Find(&model).Error
+				if err != nil {
+					return nil, err
+				}
+
+				model.Reason = reason
+				err = common.GORM.Model(&modLogs).Association("Warns").Append(model).Error
+			case "Mute":
+				model := Mute{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Mutes").Find(&model).Error
+				if err != nil {
+					return nil, err
+				}
+
+				model.Reason = reason
+				err = common.GORM.Model(&modLogs).Association("Mutes").Append(model).Error
+			case "Kick":
+				model := Kick{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Kicks").Find(&model).Error
+				if err != nil {
+					return nil, err
+				}
+
+				model.Reason = reason
+				err = common.GORM.Model(&modLogs).Association("Kicks").Append(model).Error
+			case "Ban":
+				model := Ban{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Bans").Find(&model).Error
+				if err != nil {
+					return nil, err
+				}
+
+				model.Reason = reason
+				err = common.GORM.Model(&modLogs).Association("Bans").Append(model).Error
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			return "Done.", nil
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "DeleteLog",
+		Description:              "Deletes a mod log entry of the user",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RequiredArgs:             3,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "User", Help: "The user you want to delete the punishments of", Type: &commands.MemberArg{}},
+			{Name: "Type", Help: "The type of punishment (Warn, Mute, Kick, Ban)", Type: dcmd.String},
+			{Name: "ID", Help: "The punishment ID, found in the modLogs", Type: dcmd.Int},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			userID := parsed.Args[0].User().ID
+			Type := strings.Title(parsed.Args[1].Str())
+			ID := parsed.Args[2].Int()
+
+			if !strings.Contains("WarnMuteKickBan", Type) {
+				return "Incorrect type, must be one of: 'Warn', 'Mute', 'Kick', 'Ban'", nil
+			}
+
+			modLogs := ModLog{UserID: uint64(userID)}
+			var err error
+
+			switch Type {
+			case "Warn":
+				model := Warn{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Warns").Delete(&model).Error
+			case "Mute":
+				model := Mute{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Mutes").Delete(&model).Error
+			case "Kick":
+				model := Kick{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Kicks").Delete(&model).Error
+			case "Ban":
+				model := Ban{ID: uint(ID)}
+
+				err = common.GORM.Model(&modLogs).Association("Bans").Delete(&model).Error
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			return "Done.", nil
+		},
+	},
 }
 
-func generatePunishments(data *LightDBEntry) []*discordgo.MessageEmbedField {
-	var punishments []*discordgo.MessageEmbedField
-	values, _ := templates.StringKeyDictionary(data.Value.(*templates.SDict))
+type EphemeralOrGuild struct {
+	Content string
+	Embed   *discordgo.MessageEmbed
+}
 
-	for key, value := range values {
-		sDict := value.(*templates.SDict)
-		reason := sDict.Get("r").(string)
-		var duration string
+func modLogPager(member *dstate.MemberState, p *paginatedmessages.PaginatedMessage, page int, modLogEntries []ModLogEntry) (*discordgo.MessageEmbed, error) {
+	count := len(modLogEntries)
+	if count < 1 && p != nil && p.LastResponse != nil { //Dont send No Results error on first execution
+		return nil, paginatedmessages.ErrNoResults
+	}
 
-		if sDict.HasKey("d") {
-			seconds := sDict.Get("d").(int64)
-			duration = strings.Join([]string{strconv.FormatInt(seconds, 10), "s"}, "")
+	maxNum := 5 * page
+	if maxNum > count {
+		maxNum = count
+	}
 
+	embed := &discordgo.MessageEmbed{}
+
+	if member != nil {
+		embed = &discordgo.MessageEmbed{
+			Title: "Moderation logs",
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
+			},
+			Description: fmt.Sprintf("**User**: %s (%d)\n>>> ", member.User.Mention(), member.User.ID),
+		}
+	} else {
+		embed = &discordgo.MessageEmbed{
+			Title:       "Moderation logs",
+			Description: ">>> ",
+		}
+	}
+
+	for i := 0 + (5 * (page - 1)); i < maxNum; i++ {
+		entry := modLogEntries[i]
+		embed.Description = embed.Description + fmt.Sprintf("### %s\n **ID**: %d\n **Reason**: %s", entry.Type, entry.ID, entry.Reason)
+
+		if entry.Duration > 0 {
+			embed.Description = embed.Description + fmt.Sprintf("\n **Duration**: %s", entry.Duration)
 		}
 
+		embed.Description = embed.Description + fmt.Sprintf("\n **Given By**: %s\n **Given At**: <t:%d:f>\n **Log**: %s\n", entry.Author.Mention(), entry.GivenAt.Unix(), fmt.Sprintf("[Link](%s)", entry.LogLink))
+	}
+
+	return embed, nil
+}
+
+func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
+	modLogs := ModLog{UserID: userID}
+	var modLogEntries []ModLogEntry
+
+	err := common.GORM.Model(&modLogs).Preload("Warns").Preload("Mutes").Preload("Kicks").Preload("Bans").First(&modLogs).Error
+	if err != nil {
+		log.Error(err)
+		return []ModLogEntry{}, nil
+	}
+
+	for _, entry := range modLogs.Warns {
+		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, err := bot.GetMember(guildID, authorID)
+		if err != nil {
+			return nil, err
+		}
+
+		modLogEntries = append(modLogEntries, ModLogEntry{Type: "Warn", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, GivenAt: entry.CreatedAt})
+	}
+
+	for _, entry := range modLogs.Mutes {
+		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, err := bot.GetMember(guildID, authorID)
+		if err != nil {
+			return nil, err
+		}
+
+		modLogEntries = append(modLogEntries, ModLogEntry{Type: "Mute", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, Duration: entry.Duration, GivenAt: entry.CreatedAt})
+	}
+
+	for _, entry := range modLogs.Kicks {
+		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, err := bot.GetMember(guildID, authorID)
+		if err != nil {
+			return nil, err
+		}
+
+		modLogEntries = append(modLogEntries, ModLogEntry{Type: "Kick", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, GivenAt: entry.CreatedAt})
+	}
+
+	for _, entry := range modLogs.Bans {
+		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, err := bot.GetMember(guildID, authorID)
+		if err != nil {
+			return nil, err
+		}
+
+		modLogEntries = append(modLogEntries, ModLogEntry{Type: "Ban", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, Duration: entry.Duration, GivenAt: entry.CreatedAt})
+	}
+
+	return modLogEntries, nil
+}
+
+func generatePunishments(data []ModLogEntry) []*discordgo.MessageEmbedField {
+	var punishments []*discordgo.MessageEmbedField
+
+	for i := 0; i < len(data); i++ {
+		entry := data[i]
 		field := []*discordgo.MessageEmbedField{
-			{Name: "ID", Value: key, Inline: true},
-			{Name: "Reason", Value: reason, Inline: true},
-			{Name: "Duration", Value: templates.ToDuration(duration).String(), Inline: true},
+			{Name: "ID", Value: strconv.FormatUint(entry.ID, 10), Inline: true},
+			{Name: "Reason", Value: entry.Reason, Inline: true},
+			{Name: "Duration", Value: templates.ToDuration(entry.Duration).String(), Inline: true},
 		}
 
 		punishments = append(punishments, field...)
@@ -1879,7 +1960,7 @@ func generateWatchlistEmbed(guildID int64, user *discordgo.User, author *discord
 			URL: discordgo.EndpointUserAvatar(user.ID, user.Avatar),
 		},
 		Color:       16777215,
-		Description: fmt.Sprintf(">>> **User:** %s\n**Reason:** %s\n **Ping Toggle:** %s", user.Mention(), data.Reason, strconv.FormatBool(data.Pingable)),
+		Description: fmt.Sprintf(">>> **User:** %s (%d)\n**Reason:** %s\n **Ping Toggle:** %s", user.Mention(), user.ID, data.Reason, strconv.FormatBool(data.Pingable)),
 		Timestamp:   time.Now().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    fmt.Sprintf("Watchlist entry last updated by %s", author.Globalname),
@@ -1887,19 +1968,11 @@ func generateWatchlistEmbed(guildID int64, user *discordgo.User, author *discord
 		},
 	}
 
-	hasLogs, err := dbHasKey(guildID, user.ID, "logs")
+	punishList, err := generatePunishList(guildID, uint64(user.ID))
 	if err != nil {
 		log.Error(err)
-		return nil
-	}
-
-	if hasLogs {
-		result, err := dbGet(guildID, user.ID, "logs")
-		if err != nil {
-			log.Error(err)
-		} else {
-			embed.Fields = append(embed.Fields, generatePunishments(result)...)
-		}
+	} else {
+		embed.Fields = append(embed.Fields, generatePunishments(punishList)...)
 	}
 
 	if len(data.Feuds) > 0 {
@@ -2046,206 +2119,4 @@ func AdvancedDeleteMessages(guildID, channelID int64, triggerID int64, filterUse
 	}
 
 	return len(toDelete), err
-}
-
-func PaginateWarnings(parsed *dcmd.Data) func(p *paginatedmessages.PaginatedMessage, page int) (*discordgo.MessageEmbed, error) {
-
-	return func(p *paginatedmessages.PaginatedMessage, page int) (*discordgo.MessageEmbed, error) {
-
-		var err error
-		skip := (page - 1) * 6
-		userID := parsed.Args[0].Int64()
-		limit := 6
-
-		var result []*WarningModel
-		var count int
-		err = common.GORM.Table("moderation_warnings").Where("user_id = ? AND guild_id = ?", userID, parsed.GuildData.GS.ID).Count(&count).Error
-		if err != nil && err != gorm.ErrRecordNotFound {
-			return nil, err
-		}
-		err = common.GORM.Where("user_id = ? AND guild_id = ?", userID, parsed.GuildData.GS.ID).Order("id desc").Offset(skip).Limit(limit).Find(&result).Error
-		if err != nil && err != gorm.ErrRecordNotFound {
-			return nil, err
-		}
-
-		if len(result) < 1 && p != nil && p.LastResponse != nil { //Dont send No Results error on first execution
-			return nil, paginatedmessages.ErrNoResults
-		}
-
-		desc := fmt.Sprintf("**Total :** `%d`", count)
-		var fields []*discordgo.MessageEmbedField
-		currentField := &discordgo.MessageEmbedField{
-			Name:  "⠀", //Use braille blank character for seamless transition between feilds
-			Value: "",
-		}
-		fields = append(fields, currentField)
-		if len(result) > 0 {
-
-			for _, entry := range result {
-
-				entry_formatted := fmt.Sprintf("#%d: <t:%d:f> - By: **%s** (%13s) \n **Reason:** %s", entry.ID, entry.CreatedAt.Unix(), entry.AuthorUsernameDiscrim, entry.AuthorID, entry.Message)
-				if len([]rune(entry_formatted)) > 900 {
-					entry_formatted = common.CutStringShort(entry_formatted, 900)
-				}
-				entry_formatted += "\n"
-				purgedWarnLogs := logs.ConfEnableMessageLogPurge.GetBool() && entry.CreatedAt.Before(time.Now().AddDate(0, 0, -30))
-				if entry.LogsLink != "" && !purgedWarnLogs {
-					entry_formatted += fmt.Sprintf("> logs: [`link`](%s)\n", entry.LogsLink)
-				}
-				if len([]rune(currentField.Value+entry_formatted)) > 1023 {
-					currentField = &discordgo.MessageEmbedField{
-						Name:  "⠀",
-						Value: entry_formatted + "\n",
-					}
-					fields = append(fields, currentField)
-				} else {
-					currentField.Value += entry_formatted + "\n"
-				}
-			}
-
-		} else {
-			currentField.Value = "No Warnings"
-		}
-
-		return &discordgo.MessageEmbed{
-			Title:       fmt.Sprintf("Warnings - User : %d", userID),
-			Description: desc,
-			Fields:      fields,
-		}, nil
-	}
-}
-
-func serializeValue(v interface{}) ([]byte, error) {
-	var b bytes.Buffer
-	enc := msgpack.NewEncoder(templates.LimitWriter(&b, 100000))
-	err := enc.Encode(v)
-	b.Bytes()
-	return b.Bytes(), err
-}
-
-func limitString(s string, l int) string {
-	if len(s) <= l {
-		return s
-	}
-
-	lastValidLoc := 0
-	for i := range s {
-		if i > l {
-			break
-		}
-		lastValidLoc = i
-	}
-
-	return s[:lastValidLoc]
-}
-func dbGet(guildID int64, userID int64, key interface{}) (*LightDBEntry, error) {
-	keyStr := limitString(templates.ToString(key), 256)
-	m, err := models.TemplatesUserDatabases(qm.Where("guild_id = ? AND user_id = ? AND key = ? AND (expires_at IS NULL OR expires_at > now())", guildID, userID, keyStr)).OneG(context.Background())
-
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return nil, err
-		}
-
-		return nil, nil
-	}
-
-	return ToLightDBEntry(m)
-}
-
-func dbHasKey(guildID int64, userID int64, key interface{}) (bool, error) {
-	keyStr := limitString(templates.ToString(key), 256)
-	count, err := models.TemplatesUserDatabases(qm.Where("guild_id = ? AND user_id = ? AND key = ? AND (expires_at IS NULL OR expires_at > now())", guildID, userID, keyStr)).CountG(context.Background())
-
-	if err != nil {
-		if err != sql.ErrNoRows {
-			return false, err
-		}
-
-		return false, nil
-	}
-
-	return count > 0, nil
-}
-
-func ToLightDBEntry(m *models.TemplatesUserDatabase) (*LightDBEntry, error) {
-	var dst interface{}
-	dec := newDecoder(bytes.NewBuffer(m.ValueRaw))
-	err := dec.Decode(&dst)
-	if err != nil {
-		return nil, err
-	}
-
-	decodedValue := dst
-	if common.IsNumber(dst) {
-		decodedValue = m.ValueNum
-	}
-
-	entry := &LightDBEntry{
-		ID:      m.ID,
-		GuildID: m.GuildID,
-		UserID:  m.UserID,
-
-		CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
-
-		Key:   m.Key,
-		Value: decodedValue,
-
-		ExpiresAt: m.ExpiresAt.Time,
-	}
-	entry.User.ID = entry.UserID
-
-	return entry, nil
-}
-
-func newDecoder(buf *bytes.Buffer) *msgpack.Decoder {
-	dec := msgpack.NewDecoder(buf)
-
-	dec.SetDecodeMapFunc(func(d *msgpack.Decoder) (interface{}, error) {
-		n, err := d.DecodeMapLen()
-		if err != nil {
-			return nil, err
-		}
-
-		isStringKeysOnly := true
-		mi := make(map[interface{}]interface{}, n)
-		ms := make(map[string]interface{})
-
-		for i := 0; i < n; i++ {
-			mk, err := d.DecodeInterface()
-			if err != nil {
-				return nil, err
-			}
-
-			mv, err := d.DecodeInterface()
-			if err != nil {
-				return nil, err
-			}
-
-			// if the map only has string keys, use a map[string]interface{}
-			if isStringKeysOnly {
-				if s, ok := mk.(string); ok {
-					// so far only string keys
-					ms[s] = mv
-				} else {
-					// copy over the map to the interface{} keyed one
-					isStringKeysOnly = false
-					for jk, jv := range ms {
-						mi[jk] = jv
-					}
-					mi[mk] = mv
-				}
-			} else {
-				mi[mk] = mv
-			}
-		}
-		if isStringKeysOnly {
-			return ms, nil
-		}
-
-		return mi, nil
-	})
-
-	return dec
 }

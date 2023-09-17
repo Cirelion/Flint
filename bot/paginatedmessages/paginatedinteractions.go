@@ -143,6 +143,57 @@ func CreatePaginatedMessage(guildID, channelID int64, initPage, maxPages int, pa
 	return pm, nil
 }
 
+func CreatePaginatedModLogMessage(session *discordgo.Session, token string, guildID int64, channelID int64, initPage, maxPages int, pagerFunc PagerFunc) (*PaginatedMessage, error) {
+	if initPage < 1 {
+		initPage = 1
+	}
+
+	pm := &PaginatedMessage{
+		GuildID:        guildID,
+		ChannelID:      channelID,
+		CurrentPage:    initPage,
+		MaxPage:        maxPages,
+		lastUpdateTime: time.Now(),
+		stopCh:         make(chan bool),
+		Navigate:       pagerFunc,
+	}
+
+	embed, err := pagerFunc(pm, initPage)
+	if err != nil {
+		return nil, err
+	}
+
+	footer := "Page " + strconv.Itoa(initPage)
+	nextButtonDisabled := false
+	if pm.MaxPage > 0 {
+		footer += "/" + strconv.Itoa(pm.MaxPage)
+		nextButtonDisabled = initPage >= pm.MaxPage
+	}
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: footer,
+	}
+	embed.Timestamp = time.Now().Format(time.RFC3339)
+
+	msg, err := session.EditOriginalInteractionResponse(common.BotApplication.ID, token, &discordgo.WebhookParams{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: createNavigationButtons(true, nextButtonDisabled),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	pm.MessageID = msg.ID
+	pm.LastResponse = embed
+
+	menusLock.Lock()
+	activePaginatedMessagesMap[pm.MessageID] = pm
+	menusLock.Unlock()
+
+	go pm.modLogsPaginationTicker(token)
+
+	return pm, nil
+}
 func (p *PaginatedMessage) HandlePageButtonClick(ic *discordgo.InteractionCreate, pageMod int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -162,6 +213,7 @@ func (p *PaginatedMessage) HandlePageButtonClick(ic *discordgo.InteractionCreate
 
 	newPage := p.CurrentPage + pageMod
 	newMsg, err := p.Navigate(p, newPage)
+
 	if err != nil {
 		if err == ErrNoResults {
 			if pageMod == 1 {
@@ -205,6 +257,11 @@ func (p *PaginatedMessage) HandlePageButtonClick(ic *discordgo.InteractionCreate
 		Components: createNavigationButtons(newPage <= 1, nextButtonDisabled),
 		Channel:    ic.ChannelID,
 		ID:         ic.Message.ID,
+	})
+
+	_, err = common.BotSession.EditOriginalInteractionResponse(common.BotApplication.ID, ic.Token, &discordgo.WebhookParams{
+		Embeds:     []*discordgo.MessageEmbed{newMsg},
+		Components: createNavigationButtons(p.CurrentPage < 2, p.CurrentPage >= p.MaxPage),
 	})
 
 	if err != nil {
@@ -266,6 +323,131 @@ OUTER:
 		menusLock.Lock()
 		delete(activePaginatedMessagesMap, p.MessageID)
 		menusLock.Unlock()
+		return
+	}
+}
+
+func (p *PaginatedMessage) HandleModLogPageButtonClick(ic *discordgo.InteractionCreate, pageMod int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Pong the interaction
+	err := common.BotSession.CreateInteractionResponse(ic.ID, ic.Token, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
+	if err != nil {
+		return
+	}
+
+	if pageMod == 0 || (pageMod == -1 && p.CurrentPage <= 1) ||
+		(p.MaxPage > 0 && pageMod == 1 && p.CurrentPage+pageMod > p.MaxPage) {
+		return
+	}
+
+	newPage := p.CurrentPage + pageMod
+	newMsg, err := p.Navigate(p, newPage)
+
+	if err != nil {
+		if err == ErrNoResults {
+			if pageMod == 1 {
+				newPage--
+			}
+			if newPage < 1 {
+				newPage = 1
+			}
+
+			p.MaxPage = newPage
+			newMsg = p.LastResponse
+			logger.Println("Max page set to ", newPage)
+		} else {
+			logger.WithError(err).WithField("guild", p.GuildID).Error("failed getting new page")
+			return
+		}
+	}
+
+	if newMsg == nil {
+		// No change...
+		return
+	}
+	p.LastResponse = newMsg
+	p.lastUpdateTime = time.Now()
+
+	p.CurrentPage = newPage
+	footer := "Page " + strconv.Itoa(newPage)
+	nextButtonDisabled := false
+	if p.MaxPage > 0 {
+		footer += "/" + strconv.Itoa(p.MaxPage)
+		nextButtonDisabled = newPage >= p.MaxPage
+	}
+
+	newMsg.Footer = &discordgo.MessageEmbedFooter{
+		Text: footer,
+	}
+	newMsg.Timestamp = time.Now().Format(time.RFC3339)
+
+	_, err = common.BotSession.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Embeds:     []*discordgo.MessageEmbed{newMsg},
+		Components: createNavigationButtons(newPage <= 1, nextButtonDisabled),
+		Channel:    ic.ChannelID,
+		ID:         ic.Message.ID,
+	})
+
+	if err != nil {
+		switch code, _ := common.DiscordError(err); code {
+		case discordgo.ErrCodeUnknownChannel, discordgo.ErrCodeUnknownMessage, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions:
+			p.Broken = true
+		default:
+			logger.WithError(err).WithField("guild", p.GuildID).Error("failed updating paginated message")
+		}
+	}
+}
+func (p *PaginatedMessage) modLogsPaginationTicker(token string) {
+	t := time.NewTicker(time.Second * 5)
+	defer t.Stop()
+
+OUTER:
+	for {
+		select {
+		case <-t.C:
+			p.mu.Lock()
+			toRemove := time.Since(p.lastUpdateTime) > time.Minute*10 || p.Broken
+			p.mu.Unlock()
+			if !toRemove {
+				continue OUTER
+			}
+
+		case <-p.stopCh:
+		}
+
+		// remove the navigation buttons
+		lastMessage := p.LastResponse
+		footer := "Page " + strconv.Itoa(p.CurrentPage)
+		if p.MaxPage > 0 {
+			footer += "/" + strconv.Itoa(p.MaxPage)
+		}
+		lastMessage.Footer = &discordgo.MessageEmbedFooter{
+			Text: footer,
+		}
+		lastMessage.Timestamp = time.Now().Format(time.RFC3339)
+
+		_, err := common.BotSession.EditOriginalInteractionResponse(common.BotApplication.ID, token, &discordgo.WebhookParams{
+			Embeds:     []*discordgo.MessageEmbed{lastMessage},
+			Components: createNavigationButtons(p.CurrentPage < 2, p.CurrentPage >= p.MaxPage),
+		})
+
+		if err != nil {
+			switch code, _ := common.DiscordError(err); code {
+			case discordgo.ErrCodeUnknownChannel, discordgo.ErrCodeUnknownMessage, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions:
+				p.Broken = true
+			default:
+				logger.WithError(err).WithField("guild", p.GuildID).Error("failed updating paginated message")
+			}
+		}
+
+		//// remove the object from map
+		//menusLock.Lock()
+		//delete(activePaginatedMessagesMap, p.MessageID)
+		//menusLock.Unlock()
 		return
 	}
 }

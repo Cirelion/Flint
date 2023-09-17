@@ -345,7 +345,7 @@ func (yc *YAGCommand) PostCommandExecuted(settings *CommandSettings, cmdData *dc
 
 	// Send the response
 	var replies []*discordgo.Message
-	if resp == nil && cmdData.TriggerType == dcmd.TriggerTypeSlashCommands {
+	if resp == nil && cmdData.TriggerType == dcmd.TriggerTypeSlashCommands && !strings.Contains(cmdData.Cmd.Trigger.Names[0], "Log") {
 		common.BotSession.DeleteInteractionResponse(common.BotApplication.ID, cmdData.SlashCommandTriggerData.Interaction.Token)
 	} else if resp != nil {
 		replies, err = dcmd.SendResponseInterface(cmdData, resp, true)
