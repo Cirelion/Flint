@@ -302,7 +302,7 @@ func HandleGuildMemberTimeoutChange(evt *eventsystem.EventData) (retry bool, err
 		return false, nil
 	}
 
-	err = CreateModlogEmbed(config, author, MATimeoutAdded, data.User, entry.Reason, "", -1)
+	err = CreateModlogEmbed(config, author, MATimeoutAdded, data.User, entry.Reason, "", "", -1)
 	if err != nil {
 		logger.WithError(err).WithField("guild", data.GuildID).Error("Failed sending timeout log message")
 		return false, errors.WithStackIf(err)
@@ -394,7 +394,7 @@ func HandleGuildBanAddRemove(evt *eventsystem.EventData) {
 		reason = "Timed ban expired"
 	}
 
-	err = CreateModlogEmbed(config, author, action, user, reason, "", -1)
+	err = CreateModlogEmbed(config, author, action, user, reason, "", "", -1)
 	if err != nil {
 		logger.WithError(err).WithField("guild", guildID).Error("Failed sending " + action.Prefix + " log message")
 	}
@@ -435,7 +435,7 @@ func checkAuditLogMemberRemoved(config *Config, data *discordgo.GuildMemberRemov
 		return
 	}
 
-	err := CreateModlogEmbed(config, author, MAKick, data.User, entry.Reason, "", -1)
+	err := CreateModlogEmbed(config, author, MAKick, data.User, entry.Reason, "", "", -1)
 	if err != nil {
 		logger.WithError(err).WithField("guild", data.GuildID).Error("Failed sending kick log message")
 	}
@@ -626,7 +626,7 @@ func handleScheduledUnmute(evt *seventsmodels.ScheduledEvent, data interface{}) 
 		return scheduledevents2.CheckDiscordErrRetry(err), err
 	}
 
-	err = MuteUnmuteUser(nil, false, evt.GuildID, nil, nil, common.BotUser, "Mute Duration Expired", member, 0)
+	err = MuteUnmuteUser(nil, false, evt.GuildID, nil, nil, common.BotUser, "Mute Duration Expired", "", member, 0)
 	if errors.Cause(err) != ErrNoMuteRole {
 		return scheduledevents2.CheckDiscordErrRetry(err), err
 	}

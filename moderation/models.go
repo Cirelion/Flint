@@ -148,10 +148,6 @@ type ModLog struct {
 	UpdatedAt time.Time
 }
 
-func (w *ModLog) TableName() string {
-	return "mod_logs"
-}
-
 type Warn struct {
 	ID       uint `gorm:"primary_key"`
 	ModLogID uint64
@@ -159,6 +155,7 @@ type Warn struct {
 
 	Reason  string
 	LogLink string
+	Proof   string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -172,6 +169,7 @@ type Mute struct {
 	Reason   string
 	Duration time.Duration
 	LogLink  string
+	Proof    string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -184,6 +182,7 @@ type Kick struct {
 
 	Reason  string
 	LogLink string
+	Proof   string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -197,13 +196,10 @@ type Ban struct {
 	Reason   string
 	Duration time.Duration
 	LogLink  string
+	Proof    string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-func (w *Warn) TableName() string {
-	return "mod_log_warns"
 }
 
 type WatchList struct {

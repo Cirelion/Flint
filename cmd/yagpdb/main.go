@@ -19,7 +19,6 @@ import (
 
 	// Plugin imports
 	"github.com/botlabs-gg/yagpdb/v2/automod"
-	"github.com/botlabs-gg/yagpdb/v2/automod_legacy"
 	//"github.com/botlabs-gg/yagpdb/v2/autorole"
 	//"github.com/botlabs-gg/yagpdb/v2/cah"
 	"github.com/botlabs-gg/yagpdb/v2/commands"
@@ -70,7 +69,6 @@ func main() {
 	moderation.RegisterPlugin()
 	reputation.RegisterPlugin()
 	//streaming.RegisterPlugin()
-	automod_legacy.RegisterPlugin()
 	automod.RegisterPlugin()
 	logs.RegisterPlugin()
 	autorole.RegisterPlugin()

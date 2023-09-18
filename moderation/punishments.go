@@ -51,7 +51,7 @@ func getMemberWithFallback(gs *dstate.GuildSet, user *discordgo.User) (ms *dstat
 }
 
 // Kick or bans someone, uploading a hasebin log, and sending the report message in the action channel
-func punish(config *Config, p Punishment, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, user *discordgo.User, duration time.Duration, variadicBanDeleteDays ...int) error {
+func punish(config *Config, p Punishment, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, user *discordgo.User, duration time.Duration, variadicBanDeleteDays ...int) error {
 
 	config, err := getConfigIfNotSet(guildID, config)
 	if err != nil {
@@ -103,7 +103,7 @@ func punish(config *Config, p Punishment, guildID int64, channel *dstate.Channel
 
 	switch p {
 	case PunishmentKick:
-		err = SaveModLog("Kick", guildID, discordgo.StrID(author.ID), uint64(user.ID), reason, logLink, duration)
+		err = SaveModLog("Kick", guildID, discordgo.StrID(author.ID), uint64(user.ID), reason, logLink, proof, duration)
 		if err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func punish(config *Config, p Punishment, guildID int64, channel *dstate.Channel
 			banDeleteDays = variadicBanDeleteDays[0]
 		}
 
-		err = SaveModLog("Ban", guildID, discordgo.StrID(author.ID), uint64(user.ID), reason, logLink, duration)
+		err = SaveModLog("Ban", guildID, discordgo.StrID(author.ID), uint64(user.ID), reason, logLink, proof, duration)
 		if err != nil {
 			return err
 		}
@@ -162,7 +162,7 @@ func punish(config *Config, p Punishment, guildID int64, channel *dstate.Channel
 		}
 	}
 
-	err = CreateModlogEmbed(config, author, action, user, reason, logLink, duration)
+	err = CreateModlogEmbed(config, author, action, user, reason, logLink, proof, duration)
 	return err
 }
 
@@ -220,13 +220,13 @@ func sendPunishDM(config *Config, dmMsg string, action ModlogAction, gs *dstate.
 	}
 }
 
-func KickUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, user *discordgo.User, del int) error {
+func KickUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, user *discordgo.User, del int) error {
 	config, err := getConfigIfNotSet(guildID, config)
 	if err != nil {
 		return common.ErrWithCaller(err)
 	}
 
-	err = punish(config, PunishmentKick, guildID, channel, message, author, reason, user, 0)
+	err = punish(config, PunishmentKick, guildID, channel, message, author, reason, proof, user, 0)
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func DeleteMessages(guildID, channelID int64, filterUser int64, deleteNum, fetch
 	return len(toDelete), err
 }
 
-func BanUserWithDuration(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, user *discordgo.User, duration time.Duration, deleteMessageDays int) error {
+func BanUserWithDuration(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, user *discordgo.User, duration time.Duration, deleteMessageDays int) error {
 	// Set a key in redis that marks that this user has appeared in the modlog already
 	common.RedisPool.Do(radix.Cmd(nil, "SETEX", RedisKeyBannedUser(guildID, user.ID), "60", "1"))
 	if deleteMessageDays > 7 {
@@ -293,7 +293,7 @@ func BanUserWithDuration(config *Config, guildID int64, channel *dstate.ChannelS
 		deleteMessageDays = 0
 	}
 
-	err := punish(config, PunishmentBan, guildID, channel, message, author, reason, user, duration, deleteMessageDays)
+	err := punish(config, PunishmentBan, guildID, channel, message, author, reason, proof, user, duration, deleteMessageDays)
 	if err != nil {
 		return err
 	}
@@ -313,8 +313,8 @@ func BanUserWithDuration(config *Config, guildID int64, channel *dstate.ChannelS
 	return nil
 }
 
-func BanUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, user *discordgo.User) error {
-	return BanUserWithDuration(config, guildID, channel, message, author, reason, user, 0, 1)
+func BanUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, user *discordgo.User) error {
+	return BanUserWithDuration(config, guildID, channel, message, author, reason, proof, user, 0, 1)
 }
 
 func UnbanUser(config *Config, guildID int64, author *discordgo.User, reason string, user *discordgo.User) (bool, error) {
@@ -352,13 +352,13 @@ func UnbanUser(config *Config, guildID int64, author *discordgo.User, reason str
 
 	//modLog Entry handling
 	if config.LogUnbans {
-		err = CreateModlogEmbed(config, author, action, user, reason, "", -1)
+		err = CreateModlogEmbed(config, author, action, user, reason, "", "", -1)
 	}
 	return false, err
 }
 
-func TimeoutUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, user *discordgo.User, duration time.Duration) error {
-	err := punish(config, PunishmentTimeout, guildID, channel, message, author, reason, user, duration, 0)
+func TimeoutUser(config *Config, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, user *discordgo.User, duration time.Duration) error {
+	err := punish(config, PunishmentTimeout, guildID, channel, message, author, reason, proof, user, duration, 0)
 	if err != nil {
 		return err
 	}
@@ -379,7 +379,7 @@ func RemoveTimeout(config *Config, guildID int64, author *discordgo.User, reason
 	}
 
 	logger.Infof("MODERATION: %s %s %s cause %q", author.Username, action.Prefix, user.Username, reason)
-	err = CreateModlogEmbed(config, author, action, user, reason, "", -1)
+	err = CreateModlogEmbed(config, author, action, user, reason, "", "", -1)
 	return err
 }
 
@@ -401,7 +401,7 @@ const (
 
 // Unmut or mute a user, ignore duration if unmuting
 // TODO: i don't think we need to track mutes in its own database anymore now with the new scheduled event system
-func MuteUnmuteUser(config *Config, mute bool, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, member *dstate.MemberState, duration int) error {
+func MuteUnmuteUser(config *Config, mute bool, guildID int64, channel *dstate.ChannelState, message *discordgo.Message, author *discordgo.User, reason string, proof string, member *dstate.MemberState, duration int) error {
 	config, err := getConfigIfNotSet(guildID, config)
 	if err != nil {
 		return common.ErrWithCaller(err)
@@ -525,13 +525,13 @@ func MuteUnmuteUser(config *Config, mute bool, guildID int64, channel *dstate.Ch
 	}
 
 	if reason != "Mute Duration Expired" {
-		err = SaveModLog("Mute", guildID, discordgo.StrID(author.ID), uint64(member.User.ID), reason, logLink, time.Duration(duration)*time.Minute)
+		err = SaveModLog("Mute", guildID, discordgo.StrID(author.ID), uint64(member.User.ID), reason, logLink, proof, time.Duration(duration)*time.Minute)
 		if err != nil {
 			return err
 		}
 	}
 	// Create the modlog entry
-	return CreateModlogEmbed(config, author, action, &member.User, reason, logLink, time.Duration(duration)*time.Minute)
+	return CreateModlogEmbed(config, author, action, &member.User, reason, logLink, proof, time.Duration(duration)*time.Minute)
 }
 
 func AddMemberMuteRole(config *Config, id int64, currentRoles []int64) (removedRoles []int64, err error) {
@@ -608,7 +608,7 @@ func decideUnmuteRoles(config *Config, currentRoles []int64, mute MuteModel) []s
 	return newMemberRoles
 }
 
-func SaveModLog(variant string, guildID int64, authorID string, userID uint64, reason string, logLink string, duration time.Duration) error {
+func SaveModLog(variant string, guildID int64, authorID string, userID uint64, reason string, logLink string, proof string, duration time.Duration) error {
 	modLogs := ModLog{UserID: userID, GuildID: guildID}
 
 	err := common.GORM.Model(&modLogs).FirstOrCreate(&modLogs).Error
@@ -618,13 +618,13 @@ func SaveModLog(variant string, guildID int64, authorID string, userID uint64, r
 
 	switch variant {
 	case "Warn":
-		err = common.GORM.Model(&modLogs).Preload("Warns").Association("Warns").Append(&Warn{AuthorID: authorID, Reason: reason, LogLink: logLink}).Error
+		err = common.GORM.Model(&modLogs).Preload("Warns").Association("Warns").Append(&Warn{AuthorID: authorID, Reason: reason, LogLink: logLink, Proof: proof}).Error
 	case "Mute":
-		err = common.GORM.Model(&modLogs).Preload("Mutes").Association("Mutes").Append(&Mute{AuthorID: authorID, Reason: reason, Duration: duration, LogLink: logLink}).Error
+		err = common.GORM.Model(&modLogs).Preload("Mutes").Association("Mutes").Append(&Mute{AuthorID: authorID, Reason: reason, Duration: duration, LogLink: logLink, Proof: proof}).Error
 	case "Kick":
-		err = common.GORM.Model(&modLogs).Preload("Kicks").Association("Kicks").Append(&Kick{AuthorID: authorID, Reason: reason, LogLink: logLink}).Error
+		err = common.GORM.Model(&modLogs).Preload("Kicks").Association("Kicks").Append(&Kick{AuthorID: authorID, Reason: reason, LogLink: logLink, Proof: proof}).Error
 	case "Ban":
-		err = common.GORM.Model(&modLogs).Preload("Bans").Association("Bans").Append(&Ban{AuthorID: authorID, Reason: reason, Duration: duration, LogLink: logLink}).Error
+		err = common.GORM.Model(&modLogs).Preload("Bans").Association("Bans").Append(&Ban{AuthorID: authorID, Reason: reason, Duration: duration, LogLink: logLink, Proof: proof}).Error
 	}
 
 	if err != nil {
@@ -634,7 +634,7 @@ func SaveModLog(variant string, guildID int64, authorID string, userID uint64, r
 	return nil
 }
 
-func WarnUser(config *Config, guildID int64, channel *dstate.ChannelState, msg *discordgo.Message, author *discordgo.User, target *discordgo.User, message string) error {
+func WarnUser(config *Config, guildID int64, channel *dstate.ChannelState, msg *discordgo.Message, author *discordgo.User, target *discordgo.User, message string, proof string) error {
 	warning := &WarningModel{
 		GuildID:               guildID,
 		UserID:                discordgo.StrID(target.ID),
@@ -671,13 +671,13 @@ func WarnUser(config *Config, guildID int64, channel *dstate.ChannelState, msg *
 	}
 
 	// go bot.SendDM(target.ID, fmt.Sprintf("**%s**: You have been warned for: %s", bot.GuildName(guildID), message))
-	err = SaveModLog("Warn", guildID, discordgo.StrID(author.ID), uint64(target.ID), message, warning.LogsLink, 0)
+	err = SaveModLog("Warn", guildID, discordgo.StrID(author.ID), uint64(target.ID), message, warning.LogsLink, proof, 0)
 	if err != nil {
 		return err
 	}
 
 	if config.WarnSendToModlog && config.ActionChannel != "" {
-		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, 10080*time.Minute)
+		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, proof, 10080*time.Minute)
 		if err != nil {
 			return common.ErrWithCaller(err)
 		}

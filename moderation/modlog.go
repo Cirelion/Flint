@@ -41,7 +41,7 @@ var (
 	MAClearWarnings  = ModlogAction{Prefix: "Cleared warnings", Emoji: "👌", Color: 0x62c65f}
 )
 
-func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target *discordgo.User, reason string, duration time.Duration, logLink string) *discordgo.MessageEmbed {
+func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target *discordgo.User, reason string, logLink string, proof string, duration time.Duration) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title: fmt.Sprintf("User %s", action.Prefix),
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
@@ -54,6 +54,9 @@ func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target
 
 	if duration > 0 {
 		embed.Description = embed.Description + fmt.Sprintf("\n**Duration:** %s", common.HumanizeDuration(common.DurationPrecisionMinutes, duration))
+	}
+	if proof != "" {
+		embed.Description = embed.Description + fmt.Sprintf("\n**Proof:** %s", proof)
 	}
 
 	if logLink != "" {
@@ -70,13 +73,13 @@ func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target
 	return embed
 }
 
-func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogAction, target *discordgo.User, reason, logLink string, duration time.Duration) error {
+func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogAction, target *discordgo.User, reason, logLink string, proof string, duration time.Duration) error {
 	channelID := config.IntActionChannel()
 	config.GetGuildID()
 	if channelID == 0 {
 		return nil
 	}
-	embed := generateGenericModEmbed(action, author, target, reason, duration, logLink)
+	embed := generateGenericModEmbed(action, author, target, reason, logLink, proof, duration)
 	_, err := common.BotSession.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
 		if common.IsDiscordErr(err, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions, discordgo.ErrCodeUnknownChannel) {

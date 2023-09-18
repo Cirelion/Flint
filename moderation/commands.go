@@ -191,6 +191,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
 			if err != nil {
 				return nil, err
@@ -220,8 +221,9 @@ var ModerationCommands = []*commands.YAGCommand{
 			var msg *discordgo.Message
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
+				proof, err = getMessageReferenceContent(parsed.TraditionalTriggerData)
 			}
-			err = BanUserWithDuration(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, target, banDuration, ddays)
+			err = BanUserWithDuration(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, proof, target, banDuration, ddays)
 			if err != nil {
 				return nil, err
 			}
@@ -233,7 +235,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MABanned, parsed.Author, target, reason, banDuration, ""), nil
+			return generateGenericModEmbed(MABanned, parsed.Author, target, reason, "", "", banDuration), nil
 		},
 	},
 	{
@@ -290,7 +292,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAUnbanned, parsed.Author, target, reason, 0, ""), nil
+			return generateGenericModEmbed(MAUnbanned, parsed.Author, target, reason, "", "", 0), nil
 		},
 	},
 	{
@@ -311,6 +313,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		SlashCommandEnabled: true,
 		IsResponseEphemeral: true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
 			if err != nil {
 				return nil, err
@@ -344,9 +347,10 @@ var ModerationCommands = []*commands.YAGCommand{
 			var msg *discordgo.Message
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
+				proof, err = getMessageReferenceContent(parsed.TraditionalTriggerData)
 			}
 
-			err = KickUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, target, toDel)
+			err = KickUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, proof, target, toDel)
 			if err != nil {
 				return nil, err
 			}
@@ -358,7 +362,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAKick, parsed.Author, target, reason, -1, ""), nil
+			return generateGenericModEmbed(MAKick, parsed.Author, target, reason, "", "", -1), nil
 		},
 	},
 	{
@@ -378,6 +382,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
 			if err != nil {
 				return nil, err
@@ -411,8 +416,10 @@ var ModerationCommands = []*commands.YAGCommand{
 			var msg *discordgo.Message
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
+				proof, err = getMessageReferenceContent(parsed.TraditionalTriggerData)
 			}
-			err = MuteUnmuteUser(config, true, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, member, int(d.Minutes()))
+
+			err = MuteUnmuteUser(config, true, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, proof, member, int(d.Minutes()))
 			if err != nil {
 				return nil, err
 			}
@@ -425,7 +432,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			}
 
 			common.BotSession.GuildMemberMove(parsed.GuildData.GS.ID, target.ID, 0)
-			return generateGenericModEmbed(MAMute, parsed.Author, target, reason, d, ""), nil
+			return generateGenericModEmbed(MAMute, parsed.Author, target, reason, "", "", d), nil
 		},
 	},
 	{
@@ -468,7 +475,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
 			}
-			err = MuteUnmuteUser(config, false, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, member, -1)
+			err = MuteUnmuteUser(config, false, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, "", member, -1)
 			if err != nil {
 				return nil, err
 			}
@@ -480,7 +487,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAUnmute, parsed.Author, target, reason, -1, ""), nil
+			return generateGenericModEmbed(MAUnmute, parsed.Author, target, reason, "", "", -1), nil
 		},
 	},
 	{
@@ -501,6 +508,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
 			if err != nil {
 				return nil, err
@@ -531,12 +539,17 @@ var ModerationCommands = []*commands.YAGCommand{
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
 			}
-			err = TimeoutUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, &member.User, d)
+
+			if parsed.TriggerType == 2 {
+				proof, err = getMessageReferenceContent(parsed.TraditionalTriggerData)
+			}
+
+			err = TimeoutUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, reason, proof, &member.User, d)
 			if err != nil {
 				return nil, err
 			}
 
-			return generateGenericModEmbed(MATimeoutAdded, parsed.Author, target, reason, d, ""), nil
+			return generateGenericModEmbed(MATimeoutAdded, parsed.Author, target, reason, "", "", d), nil
 		},
 	}, {
 		CustomEnabled: true,
@@ -581,7 +594,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return generateGenericModEmbed(MATimeoutRemoved, parsed.Author, target, reason, -1, ""), nil
+			return generateGenericModEmbed(MATimeoutRemoved, parsed.Author, target, reason, "", "", -1), nil
 		},
 	},
 	{
@@ -839,6 +852,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		DefaultEnabled:           false,
 		IsResponseEphemeral:      true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
 			if err != nil {
 				return nil, err
@@ -856,8 +870,10 @@ var ModerationCommands = []*commands.YAGCommand{
 			var msg *discordgo.Message
 			if parsed.TraditionalTriggerData != nil {
 				msg = parsed.TraditionalTriggerData.Message
+				proof, err = getMessageReferenceContent(parsed.TraditionalTriggerData)
 			}
-			err = WarnUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, target, parsed.Args[1].Str())
+
+			err = WarnUser(config, parsed.GuildData.GS.ID, parsed.GuildData.CS, msg, parsed.Author, target, parsed.Args[1].Str(), proof)
 			if err != nil {
 				return nil, err
 			}
@@ -869,7 +885,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), 10080*time.Minute, ""), nil
+			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), "", "", 10080*time.Minute), nil
 		},
 	},
 	{
@@ -943,7 +959,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				if dur > 0 {
 					action.Footer = "Duration: " + common.HumanizeDuration(common.DurationPrecisionMinutes, dur)
 				}
-				CreateModlogEmbed(config, parsed.Author, action, target, "", "", -1)
+				CreateModlogEmbed(config, parsed.Author, action, target, "", "", "", -1)
 			}
 
 			return GenericCmdResp(action, target, dur, true, dur <= 0), nil
@@ -1001,7 +1017,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			action := MARemoveRole
 			action.Prefix = "Removed the role " + role.Name + " from "
 			if config.GiveRoleCmdModlog && config.IntActionChannel() != 0 {
-				CreateModlogEmbed(config, parsed.Author, action, target, "", "", -1)
+				CreateModlogEmbed(config, parsed.Author, action, target, "", "", "", -1)
 			}
 
 			return GenericCmdResp(action, target, 0, true, true), nil
@@ -1581,7 +1597,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			err := common.GORM.Model(&watchList).Find(&watchList).Error
 
 			if err != nil {
-				return "User hasn't been added to watchlist yet.", err
+				return "User hasn't been added to watchlist yet.", nil
 			} else {
 				common.GORM.Model(&watchList).First(&watchList)
 
@@ -1834,11 +1850,49 @@ var ModerationCommands = []*commands.YAGCommand{
 			return "Done.", nil
 		},
 	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "test",
+		Description:              "Adds a mod log entry to the user",
+		RequireDiscordPerms:      []int64{discordgo.PermissionAdministrator},
+		RequiredDiscordPermsHelp: "Administrator",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			if parsed.TriggerType == 2 {
+				return getMessageReferenceContent(parsed.TraditionalTriggerData)
+			}
+
+			return "No reference found or / command used.", nil
+		},
+	},
 }
 
 type EphemeralOrGuild struct {
 	Content string
 	Embed   *discordgo.MessageEmbed
+}
+
+func getMessageReferenceContent(triggerData *dcmd.TraditionalTriggerData) (string, error) {
+	messageReference := triggerData.Message.MessageReference
+
+	if messageReference != nil {
+		referencedMessage, err := common.BotSession.ChannelMessage(messageReference.ChannelID, messageReference.MessageID)
+		if err != nil {
+			return "", err
+		}
+
+		if len(referencedMessage.Attachments) > 0 {
+			return referencedMessage.Attachments[0].URL, nil
+		}
+
+		return referencedMessage.Content, nil
+	}
+
+	return "No content", nil
 }
 
 func modLogPager(member *dstate.MemberState, p *paginatedmessages.PaginatedMessage, page int, modLogEntries []ModLogEntry) (*discordgo.MessageEmbed, error) {
@@ -1942,7 +1996,7 @@ func generatePunishments(data []ModLogEntry) []*discordgo.MessageEmbedField {
 	for i := 0; i < len(data); i++ {
 		entry := data[i]
 		field := []*discordgo.MessageEmbedField{
-			{Name: "ID", Value: strconv.FormatUint(entry.ID, 10), Inline: true},
+			{Name: entry.Type, Value: strconv.FormatUint(entry.ID, 10), Inline: true},
 			{Name: "Reason", Value: entry.Reason, Inline: true},
 			{Name: "Duration", Value: templates.ToDuration(entry.Duration).String(), Inline: true},
 		}
