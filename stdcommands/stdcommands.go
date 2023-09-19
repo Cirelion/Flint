@@ -5,6 +5,7 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
 	"github.com/botlabs-gg/yagpdb/v2/commands"
 	"github.com/botlabs-gg/yagpdb/v2/common"
+	"github.com/botlabs-gg/yagpdb/v2/stdcommands/polls"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
 
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/advice"
@@ -36,7 +37,6 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/listroles"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/memstats"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/ping"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/poll"
 	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/roast"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/roll"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/setstatus"
@@ -98,7 +98,10 @@ func (p *Plugin) AddCommands() {
 		listroles.Command,
 		memstats.Command,
 		wouldyourather.Command,
-		poll.Command,
+		//poll.Command,
+		polls.Poll,
+		polls.StrawPoll,
+		polls.EndPoll,
 		undelete.Command,
 		viewperms.Command,
 		//topgames.Command,

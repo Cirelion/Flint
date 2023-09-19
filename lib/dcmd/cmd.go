@@ -116,6 +116,11 @@ type CmdWithCategory interface {
 	Category() *Category
 }
 
+// CmdIsContextMessage checks if the command is made from context
+type CmdIsContextMessage interface {
+	IsContextMessage() bool
+}
+
 // Category represents a command category
 type Category struct {
 	Name        string

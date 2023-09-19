@@ -137,8 +137,14 @@ func (p *Plugin) containerToSlashCommand(container *slashCommandsContainer) *dis
 			kind = discordgo.ApplicationCommandOptionSubCommandGroup
 		}
 
+		name := cast.Name
+
+		if !cast.IsContextMessage() {
+			name = strings.ToLower(name)
+		}
+
 		opt := &discordgo.ApplicationCommandOption{
-			Name:        strings.ToLower(cast.Name),
+			Name:        name,
 			Description: common.CutStringShort(cast.Description, 100),
 			Type:        kind,
 			Options:     innerOpts,
@@ -166,17 +172,15 @@ func (p *Plugin) yagCommandToSlashCommand(cmd *dcmd.RegisteredCommand) *discordg
 
 	if cast.ContextMenuUser {
 		return &discordgo.CreateApplicationCommandRequest{
-			Name:              strings.ToLower(cmd.Trigger.Names[0]),
+			Name:              cmd.Trigger.Names[0],
 			Type:              discordgo.ApplicationCommandType(2),
 			DefaultPermission: &t,
-			NSFW:              cast.NSFW,
 		}
 	} else if cast.ContextMenuMessage {
 		return &discordgo.CreateApplicationCommandRequest{
-			Name:              strings.ToLower(cmd.Trigger.Names[0]),
+			Name:              cmd.Trigger.Names[0],
 			Type:              discordgo.ApplicationCommandType(3),
 			DefaultPermission: &t,
-			NSFW:              cast.NSFW,
 		}
 	} else {
 		_, opts := cast.slashCommandOptions()
@@ -198,8 +202,10 @@ func (yc *YAGCommand) slashCommandOptions() (turnedIntoSubCommands bool, result 
 	for i, v := range yc.Arguments {
 
 		opts := v.Type.SlashCommandOptions(v)
-		for _, v := range opts {
-			v.Name = strings.ToLower(v.Name)
+		if !yc.IsContextMessage() {
+			for _, v := range opts {
+				v.Name = strings.ToLower(v.Name)
+			}
 		}
 
 		if len(opts) > 1 && i == 0 {
@@ -253,12 +259,16 @@ func (yc *YAGCommand) slashCommandOptions() (turnedIntoSubCommands bool, result 
 	for _, v := range yc.ArgSwitches {
 		if v.Type == nil {
 			adding := v.StandardSlashCommandOption(discordgo.ApplicationCommandOptionBoolean)
-			adding.Name = strings.ToLower(adding.Name)
+			if !yc.IsContextMessage() {
+				adding.Name = strings.ToLower(adding.Name)
+			}
 			sortedResult = append(sortedResult, adding)
 		} else {
 			adding := v.Type.SlashCommandOptions(v)
-			for _, v := range adding {
-				v.Name = strings.ToLower(v.Name)
+			if !yc.IsContextMessage() {
+				for _, v := range adding {
+					v.Name = strings.ToLower(v.Name)
+				}
 			}
 			sortedResult = append(sortedResult, adding...)
 		}
@@ -622,7 +632,7 @@ OUTER:
 	for _, r := range gs.Roles {
 		perms := int64(r.Permissions)
 		for _, rp := range requiredPerms {
-			if perms&rp == rp || perms&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator || perms&discordgo.PermissionManageServer == discordgo.PermissionManageServer {
+			if perms&rp == rp || perms&discordgo.PermissionAdministrator == discordgo.PermissionAdministrator || perms&discordgo.PermissionManageGuild == discordgo.PermissionManageGuild {
 				// this role can run the command
 				if !defaultEnabled {
 					result = append(result, r.ID)

@@ -168,6 +168,9 @@ func (yc *YAGCommand) ArgDefs(data *dcmd.Data) (args []*dcmd.ArgDef, required in
 func (yc *YAGCommand) Switches() []*dcmd.ArgDef {
 	return yc.ArgSwitches
 }
+func (yc *YAGCommand) IsContextMessage() bool {
+	return yc.ContextMenuMessage || yc.ContextMenuUser
+}
 
 var metricsExcecutedCommands = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "bot_commands_total",
@@ -345,7 +348,7 @@ func (yc *YAGCommand) PostCommandExecuted(settings *CommandSettings, cmdData *dc
 
 	// Send the response
 	var replies []*discordgo.Message
-	if resp == nil && cmdData.TriggerType == dcmd.TriggerTypeSlashCommands && !strings.Contains(cmdData.Cmd.Trigger.Names[0], "Log") {
+	if resp == nil && cmdData.TriggerType == dcmd.TriggerTypeSlashCommands && !strings.Contains(cmdData.Cmd.Trigger.Names[0], "Log") && !strings.Contains(cmdData.Cmd.Trigger.Names[0], "Poll") {
 		common.BotSession.DeleteInteractionResponse(common.BotApplication.ID, cmdData.SlashCommandTriggerData.Interaction.Token)
 	} else if resp != nil {
 		replies, err = dcmd.SendResponseInterface(cmdData, resp, true)
@@ -419,7 +422,7 @@ func (yc *YAGCommand) checkCanExecuteCommand(data *dcmd.Data) (canExecute bool, 
 		guild := data.GuildData.GS
 
 		if data.TriggerType != dcmd.TriggerTypeSlashCommands {
-			if hasPerms, _ := bot.BotHasPermissionGS(guild, data.ChannelID, discordgo.PermissionReadMessages|discordgo.PermissionSendMessages); !hasPerms {
+			if hasPerms, _ := bot.BotHasPermissionGS(guild, data.ChannelID, discordgo.PermissionViewChannel|discordgo.PermissionSendMessages); !hasPerms {
 				return false, nil, nil, nil
 			}
 		}

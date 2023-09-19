@@ -340,8 +340,11 @@ func ValidateCommandPanic(cmd Cmd, trigger *Trigger) {
 }
 
 func ValidateCommand(cmd Cmd, trigger *Trigger) error {
-	if !CmdNameRegex.MatchString(trigger.Names[0]) {
-		return errors.New("Name dosen't match legal regex")
+
+	_, isContextMessageOk := cmd.(CmdIsContextMessage)
+
+	if !isContextMessageOk && !CmdNameRegex.MatchString(trigger.Names[0]) {
+		return errors.New("Name doesn't match legal regex")
 	}
 
 	argDefsCommand, argDefsOk := cmd.(CmdWithArgDefs)
@@ -349,7 +352,7 @@ func ValidateCommand(cmd Cmd, trigger *Trigger) error {
 		defs, _, _ := argDefsCommand.ArgDefs(nil)
 		for _, v := range defs {
 			if !CmdNameRegex.MatchString(v.Name) {
-				return errors.New(v.Name + ": arg dosn't match legal regex")
+				return errors.New(v.Name + ": arg doesn't match legal regex")
 			}
 		}
 	}
@@ -360,7 +363,7 @@ func ValidateCommand(cmd Cmd, trigger *Trigger) error {
 
 		for _, v := range defs {
 			if !CmdNameRegex.MatchString(v.Name) {
-				return errors.New(v.Name + ": switch dosn't match legal regex")
+				return errors.New(v.Name + ": switch doesn't match legal regex")
 			}
 		}
 	}
