@@ -23,7 +23,7 @@ func RegisterPlugin() {
 	common.RegisterPlugin(plugin)
 
 	configstore.RegisterConfig(configstore.SQL, &Config{})
-	common.GORM.AutoMigrate(&Config{}, &Message{})
+	common.GORM.AutoMigrate(&Config{}, &Message{}, &Attachment{})
 }
 
 type Config struct {

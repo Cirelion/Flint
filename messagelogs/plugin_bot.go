@@ -8,7 +8,6 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
 	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
 	"github.com/botlabs-gg/yagpdb/v2/moderation"
-	"regexp"
 	"time"
 )
 
@@ -21,17 +20,21 @@ func (p *Plugin) BotInit() {
 }
 
 func HandleMsgCreate(evt *eventsystem.EventData) (retry bool, err error) {
+	if evt.GS == nil {
+		return false, nil
+	}
+
 	config, err := moderation.GetConfig(evt.GS.ID)
 	if err != nil {
 		return false, err
 	}
-
 	msg := evt.MessageCreate()
-	channelCategory := evt.GS.GetChannel(msg.ChannelID).ParentID
+	channel := evt.GS.GetChannelOrThread(msg.ChannelID)
 
-	if IsIgnoredChannel(config, channelCategory, msg.ChannelID) {
+	if IsIgnoredChannel(config, channel.ID, channel.ParentID) || msg.Author.Bot {
 		return false, nil
 	}
+
 	message := &Message{
 		MessageID:       msg.ID,
 		ChannelID:       msg.ChannelID,
@@ -52,34 +55,52 @@ func HandleMsgCreate(evt *eventsystem.EventData) (retry bool, err error) {
 	}
 
 	if len(msg.Attachments) > 0 {
-		message.AttachmentUrl = msg.Attachments[0].URL
-	}
+		var attachments []Attachment
+		for _, attachment := range msg.Attachments {
+			attachments = append(attachments, Attachment{
+				ID:        attachment.ID,
+				MessageID: msg.ID,
+				Url:       attachment.URL,
+				ProxyUrl:  attachment.ProxyURL,
+			})
+		}
 
+		message.Attachments = attachments
+	}
 	err = common.GORM.Model(&message).Save(&message).Error
 
 	return false, err
 }
 
 func HandleMsgUpdate(evt *eventsystem.EventData) (retry bool, err error) {
+	if evt.GS == nil {
+		return false, nil
+	}
+
 	config, err := moderation.GetConfig(evt.GS.ID)
 	msg := evt.MessageUpdate()
 	if msg.Interaction != nil {
 		return false, nil
 	}
 
-	channelCategory := evt.GS.GetChannel(msg.ChannelID).ParentID
-	if IsIgnoredChannel(config, channelCategory, msg.ChannelID) {
+	channelCategory := evt.GS.GetChannelOrThread(msg.ChannelID).ParentID
+
+	if IsIgnoredChannel(config, msg.ChannelID, channelCategory) {
 		return false, nil
 	}
 
 	message := &Message{MessageID: msg.ID}
-	err = common.GORM.Model(&message).First(&message).Error
-
-	if err != nil {
-		return false, err
+	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
+	if err != nil || message.Content == msg.Content {
+		return false, nil
 	}
 
+	originalContent := message.OriginalContent
+	if originalContent == "" {
+		originalContent = "No content"
+	}
 	message.Content = msg.Content
+	message.OriginalContent = msg.Content
 
 	err = common.GORM.Model(&message).Update(&message).Error
 	if err != nil {
@@ -107,7 +128,7 @@ func HandleMsgUpdate(evt *eventsystem.EventData) (retry bool, err error) {
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:  "Before",
-				Value: message.OriginalContent,
+				Value: originalContent,
 			},
 			{
 				Name:  "After",
@@ -116,32 +137,42 @@ func HandleMsgUpdate(evt *eventsystem.EventData) (retry bool, err error) {
 		},
 	}
 
+	if originalContent == "No content" && len(message.Attachments) == 1 {
+		embed.Image = &discordgo.MessageEmbedImage{
+			URL:      message.Attachments[0].Url,
+			ProxyURL: message.Attachments[0].Url,
+		}
+	}
+
 	_, err = common.BotSession.ChannelMessageSendEmbed(config.IntEditLogChannel(), embed)
 
 	return false, err
 }
 
 func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
+	if evt.GS == nil {
+		return false, nil
+	}
+
 	config, err := moderation.GetConfig(evt.GS.ID)
 	if evt.Type == eventsystem.EventMessageDelete {
 		msg := evt.MessageDelete()
-		channelCategory := evt.GS.GetChannel(msg.ChannelID).ParentID
-
-		if IsIgnoredChannel(config, channelCategory, msg.ChannelID) {
+		channelCategory := evt.GS.GetChannelOrThread(msg.ChannelID).ParentID
+		if IsIgnoredChannel(config, msg.ChannelID, channelCategory) {
 			return false, nil
 		}
 
 		_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, config.IntDeleteLogChannel(), msg.ID)
 	} else if evt.Type == eventsystem.EventMessageDeleteBulk {
 		messageDeleteBulk := evt.MessageDeleteBulk()
-		channelCategory := evt.GS.GetChannel(messageDeleteBulk.ChannelID).ParentID
+		channelCategory := evt.GS.GetChannelOrThread(messageDeleteBulk.ChannelID).ParentID
 
-		if IsIgnoredChannel(config, channelCategory, messageDeleteBulk.ChannelID) {
+		if IsIgnoredChannel(config, messageDeleteBulk.ChannelID, channelCategory) {
 			return false, nil
 		}
 
 		for _, msg := range messageDeleteBulk.Messages {
-			_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, config.IntDeleteLogChannel(), int64(msg))
+			_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, config.IntDeleteLogChannel(), msg)
 		}
 	}
 
@@ -151,7 +182,7 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogChannelID int64, messageID int64) (retry bool, err error) {
 	message := &Message{MessageID: messageID}
 
-	err = common.GORM.Model(&message).First(&message).Error
+	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
 
 	member, err := bot.GetMember(guildID, message.AuthorID)
 	if err != nil {
@@ -168,15 +199,16 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 		return false, err
 	}
 
-	regexResult, _ := regexp.MatchString("(mp4|avi|wmv|mov|flv|mkv|webm|vob|ogv|m4v|3gp|3g2|mpeg|mpg|m2v|svi|3gpp|3gpp2|mxf|roq|nsv|f4v|f4p|f4a|f4b)", message.AttachmentUrl)
-	if regexResult {
-		_, err = common.BotSession.ChannelMessageSend(deleteLogChannelID, message.AttachmentUrl)
+	if len(message.Attachments) != 1 {
+		for _, attachment := range message.Attachments {
+			_, err = common.BotSession.ChannelMessageSend(deleteLogChannelID, attachment.Url)
+		}
 	}
 
 	return false, err
 }
 
-func IsIgnoredChannel(config *moderation.Config, channelCategory int64, channelID int64) bool {
+func IsIgnoredChannel(config *moderation.Config, channelID int64, channelCategory int64) bool {
 	if channelCategory != 0 {
 		if common.ContainsInt64Slice(config.IgnoreCategories, channelCategory) {
 			return true
@@ -215,9 +247,10 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 		})
 	}
 
-	if message.AttachmentUrl != "" {
+	if len(message.Attachments) == 1 {
 		embed.Image = &discordgo.MessageEmbedImage{
-			URL: message.AttachmentUrl,
+			URL:      message.Attachments[0].Url,
+			ProxyURL: message.Attachments[0].ProxyUrl,
 		}
 	} else if message.StickerID != 0 {
 		if message.StickerFormatType == discordgo.StickerLOTTIE {

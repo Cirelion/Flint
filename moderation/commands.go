@@ -885,7 +885,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), "", "", 43830*time.Minute), nil
+			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), "", "", 4*7*24*time.Hour), nil
 		},
 	},
 	{
@@ -1110,6 +1110,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
+			config, _ := GetConfig(guildID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 			reason := parsed.Args[1].Str()
 			var count int
@@ -1123,10 +1125,9 @@ var ModerationCommands = []*commands.YAGCommand{
 				watchList.Reason = reason
 
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
-
-				_, err := common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
+				_, err := common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
 				if err != nil {
-					message, err := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
+					message, err := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 					if err != nil {
 						return nil, err
 					}
@@ -1153,11 +1154,12 @@ var ModerationCommands = []*commands.YAGCommand{
 					UserID:   userID,
 					AuthorID: strconv.FormatInt(parsed.Author.ID, 10),
 					Reason:   reason,
+					Ping:     "false",
 				}
 
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
 
-				message, err := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
+				message, err := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 				if err != nil {
 					return nil, err
 				}
@@ -1196,6 +1198,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Help: "The user to add to the watchlist", Type: &commands.MemberArg{}}},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			config, _ := GetConfig(parsed.GuildData.GS.ID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 
 			watchList := WatchList{UserID: uint64(user.ID)}
@@ -1207,72 +1211,13 @@ var ModerationCommands = []*commands.YAGCommand{
 				common.GORM.Model(&watchList).Association("Feuds").Delete()
 				common.GORM.Model(&watchList).Association("VerbalWarnings").Delete()
 				common.GORM.Model(&watchList).Delete(watchList)
-				err := common.BotSession.ChannelMessageDelete(1151502255703470101, watchList.MessageID)
+				err := common.BotSession.ChannelMessageDelete(int64(watchListChannel), watchList.MessageID)
 				log.Error(err)
 
 				return fmt.Sprintf("%s removed from the watchlist", user.Mention()), nil
 			} else {
 				return "User hasn't been added to watchlist yet.", nil
 			}
-		},
-	},
-	{
-		CustomEnabled:            true,
-		CmdCategory:              commands.CategoryModeration,
-		Name:                     "AddHeadModeratorNote",
-		Aliases:                  []string{"addwatchnote", "watchnote"},
-		Description:              "Adds note to a watchlisted user",
-		RequireDiscordPerms:      []int64{discordgo.PermissionAdministrator},
-		RequiredDiscordPermsHelp: "Administrator",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           true,
-		IsResponseEphemeral:      true,
-		RequiredArgs:             2,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "User", Help: "The user the note is for", Type: &commands.MemberArg{}},
-			{Name: "Note", Help: "The note to add", Type: dcmd.String},
-		},
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			guildID := parsed.GuildData.GS.ID
-			user := parsed.Args[0].User()
-			note := parsed.Args[1].Str()
-
-			userID := uint64(user.ID)
-			watchList := WatchList{UserID: userID}
-			var count int
-
-			common.GORM.Model(&watchList).Count(&count)
-
-			if count > 0 {
-				common.GORM.Model(&watchList).Preload("Feuds").Preload("VerbalWarnings").First(&watchList)
-
-				watchList.HeadModeratorNote = note
-
-				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
-
-				_, err := common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
-				if err != nil {
-					message, _ := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
-					watchList.MessageID = message.ID
-				}
-
-				err = common.GORM.Model(&watchList).Update(watchList).Error
-				if err != nil {
-					return nil, err
-				}
-
-				if parsed.TriggerType != 3 {
-					err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				return fmt.Sprintf("Head Moderator note added to %s's watchlist entry with value: \"%s\"", user.Mention(), note), nil
-			}
-
-			return "User hasn't been added to watchlist yet.", nil
 		},
 	},
 	{
@@ -1296,6 +1241,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
+			config, _ := GetConfig(guildID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 			feudingUser := parsed.Args[1].User()
 			reason := parsed.Args[2].Str()
@@ -1340,9 +1287,9 @@ var ModerationCommands = []*commands.YAGCommand{
 
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
 
-				_, err = common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
+				_, err = common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
 				if err != nil {
-					message, _ := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
+					message, _ := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 
 					watchList.MessageID = message.ID
 				}
@@ -1383,6 +1330,8 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
+			config, _ := GetConfig(guildID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 			reason := parsed.Args[1].Str()
 			messageLink := parsed.Args[2].Str()
@@ -1425,10 +1374,10 @@ var ModerationCommands = []*commands.YAGCommand{
 				watchList.VerbalWarnings = parsedWarnings
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
 
-				_, err = common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
+				_, err = common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
 				if err != nil {
 					log.Error(err)
-					message, err := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
+					message, err := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 					if err != nil {
 						return nil, err
 					}
@@ -1459,6 +1408,67 @@ var ModerationCommands = []*commands.YAGCommand{
 	{
 		CustomEnabled:            true,
 		CmdCategory:              commands.CategoryModeration,
+		Name:                     "AddHeadModeratorNote",
+		Aliases:                  []string{"addwatchnote", "watchnote"},
+		Description:              "Adds note to a watchlisted user",
+		RequireDiscordPerms:      []int64{discordgo.PermissionAdministrator},
+		RequiredDiscordPermsHelp: "Administrator",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RequiredArgs:             2,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "User", Help: "The user the note is for", Type: &commands.MemberArg{}},
+			{Name: "Note", Help: "The note to add", Type: dcmd.String},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			config, _ := GetConfig(parsed.GuildData.GS.ID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
+			guildID := parsed.GuildData.GS.ID
+			user := parsed.Args[0].User()
+			note := parsed.Args[1].Str()
+
+			userID := uint64(user.ID)
+			watchList := WatchList{UserID: userID}
+			var count int
+
+			common.GORM.Model(&watchList).Count(&count)
+
+			if count > 0 {
+				common.GORM.Model(&watchList).Preload("Feuds").Preload("VerbalWarnings").First(&watchList)
+
+				watchList.HeadModeratorNote = note
+
+				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
+
+				_, err := common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
+				if err != nil {
+					message, _ := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
+					watchList.MessageID = message.ID
+				}
+
+				err = common.GORM.Model(&watchList).Update(watchList).Error
+				if err != nil {
+					return nil, err
+				}
+
+				if parsed.TriggerType != 3 {
+					err = common.BotSession.ChannelMessageDelete(parsed.ChannelID, parsed.TraditionalTriggerData.Message.ID)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				return fmt.Sprintf("Head Moderator note added to %s's watchlist entry with value: \"%s\"", user.Mention(), note), nil
+			}
+
+			return "User hasn't been added to watchlist yet.", nil
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
 		Name:                     "RefreshWatchList",
 		Aliases:                  []string{"refeshwatch"},
 		Description:              "Refreshes the watchlist entry",
@@ -1474,21 +1484,22 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
+			config, _ := GetConfig(guildID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 			userID := uint64(user.ID)
 			watchList := WatchList{UserID: userID}
-			err := common.GORM.Model(&watchList).Preload("Feuds").Preload("VerbalWarnings").Find(&watchList).Error
+			var count int
 
-			if err != nil {
-				return "User hasn't been added to watchlist yet.", err
-			} else {
-				common.GORM.Model(&watchList).First(&watchList)
+			common.GORM.Model(&watchList).Count(&count)
 
+			if count > 0 {
+				common.GORM.Model(&watchList).Preload("Feuds").Preload("VerbalWarnings").First(&watchList)
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
 
-				_, err := common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
+				_, err := common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
 				if err != nil {
-					message, err := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
+					message, err := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 					if err != nil {
 						return nil, err
 					}
@@ -1509,6 +1520,8 @@ var ModerationCommands = []*commands.YAGCommand{
 
 				return fmt.Sprintf("%s's watchlist entry refreshed", user.Mention()), nil
 			}
+
+			return "User hasn't been added to watchlist yet.", nil
 		},
 	},
 	{
@@ -1523,36 +1536,36 @@ var ModerationCommands = []*commands.YAGCommand{
 		SlashCommandEnabled:      true,
 		DefaultEnabled:           true,
 		IsResponseEphemeral:      true,
-		RequiredArgs:             2,
+		RequiredArgs:             1,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "User", Help: "The watchlisted user", Type: &commands.MemberArg{}},
-			{Name: "Toggle", Help: "Set to 1 for on, 0 for off.", Type: &dcmd.IntArg{Max: 1}, Default: 0},
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
+			config, _ := GetConfig(guildID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
-			pingable := parsed.Args[1].Bool()
 			userID := uint64(user.ID)
 			watchList := WatchList{UserID: userID}
-			err := common.GORM.Model(&watchList).Find(&watchList).Error
+			var count int
 
-			if err != nil {
-				return "User hasn't been added to watchlist yet.", err
-			} else {
-				common.GORM.Model(&watchList).First(&watchList)
+			common.GORM.Model(&watchList).Count(&count)
 
-				watchList.Pingable = pingable
+			if count > 0 {
+				common.GORM.Model(&watchList).Preload("Feuds").Preload("VerbalWarnings").First(&watchList)
+				if watchList.Ping == "false" {
+					watchList.Ping = "true"
+				} else {
+					watchList.Ping = "false"
+				}
+
 				watchList.LastPingedAt = time.Now()
 
 				embed := generateWatchlistEmbed(guildID, user, parsed.Author, watchList)
 
-				_, err := common.BotSession.ChannelMessageEditEmbed(1151502255703470101, watchList.MessageID, embed)
+				_, err := common.BotSession.ChannelMessageEditEmbed(int64(watchListChannel), watchList.MessageID, embed)
 				if err != nil {
-					message, err := common.BotSession.ChannelMessageSendEmbed(1151502255703470101, embed)
-					if err != nil {
-						return nil, err
-					}
-
+					message, _ := common.BotSession.ChannelMessageSendEmbed(int64(watchListChannel), embed)
 					watchList.MessageID = message.ID
 				}
 
@@ -1568,8 +1581,10 @@ var ModerationCommands = []*commands.YAGCommand{
 					}
 				}
 
-				return fmt.Sprintf("%s's ping toggle set to %s", user.Mention(), strconv.FormatBool(pingable)), nil
+				return fmt.Sprintf("%s's ping toggle set to %s", user.Mention(), strconv.FormatBool(watchList.Ping == "true")), nil
 			}
+
+			return "User hasn't been added to watchlist yet.", nil
 		},
 	},
 	{
@@ -1590,6 +1605,8 @@ var ModerationCommands = []*commands.YAGCommand{
 			{Name: "ActiveChannelID", Help: "Channel ID of the channel the user is active in", Type: dcmd.String},
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			config, _ := GetConfig(parsed.GuildData.GS.ID)
+			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
 			user := parsed.Args[0].User()
 			channelID := parsed.Args[1].Str()
 			userID := uint64(user.ID)
@@ -1598,37 +1615,37 @@ var ModerationCommands = []*commands.YAGCommand{
 
 			if err != nil {
 				return "User hasn't been added to watchlist yet.", nil
-			} else {
-				common.GORM.Model(&watchList).First(&watchList)
+			} else if watchList.Ping == "true" {
+				if time.Since(watchList.LastPingedAt).Hours() > 2 {
+					message, err := common.BotSession.ChannelMessageSendComplex(int64(watchListChannel), &discordgo.MessageSend{
+						AllowedMentions: discordgo.AllowedMentions{Parse: []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeRoles}},
+						Content:         fmt.Sprintf("<@&1142548147600638022>\n Watchlisted member %s is active in channel: <#%s>", user.Mention(), channelID),
+					})
 
-				if watchList.Pingable {
-					if time.Since(watchList.LastPingedAt).Hours() > 2 {
-						message, err := common.BotSession.ChannelMessageSend(1151502255703470101, fmt.Sprintf("<@&1142548147600638022>\n Watchlisted member %s is active in channel: <#%s>", user.Mention(), channelID))
-						if err != nil {
-							return nil, err
-						}
-						watchList.LastPingedAt = time.Now()
-
-						go func() {
-							time.Sleep(10 * time.Minute)
-							err := common.BotSession.ChannelMessageDelete(message.ChannelID, message.ID)
-							if err != nil {
-								return
-							}
-						}()
-
-						err = common.GORM.Model(&watchList).Update(watchList).Error
-						if err != nil {
-							return nil, err
-						}
-
-						return "Done", nil
-					} else {
-						return fmt.Sprintf("%s pinged too recently", user.Mention()), nil
+					if err != nil {
+						return nil, err
 					}
+					watchList.LastPingedAt = time.Now()
+
+					go func() {
+						time.Sleep(10 * time.Minute)
+						err := common.BotSession.ChannelMessageDelete(message.ChannelID, message.ID)
+						if err != nil {
+							return
+						}
+					}()
+
+					err = common.GORM.Model(&watchList).Update(watchList).Error
+					if err != nil {
+						return nil, err
+					}
+
+					return "Done", nil
 				} else {
-					return fmt.Sprintf("%s's ping toggle set to false", user.Mention()), nil
+					return fmt.Sprintf("%s pinged too recently", user.Mention()), nil
 				}
+			} else {
+				return fmt.Sprintf("%s's ping toggle set to false", user.Mention()), nil
 			}
 		},
 	},
@@ -1647,7 +1664,6 @@ var ModerationCommands = []*commands.YAGCommand{
 			guildID := parsed.GuildData.GS.ID
 			userID := parsed.SlashCommandTriggerData.Interaction.DataCommand.TargetID
 			member, err := bot.GetMember(guildID, userID)
-
 			punishList, err := generatePunishList(guildID, uint64(userID))
 			if err != nil {
 				return nil, err
@@ -1943,14 +1959,14 @@ func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
 
 	err := common.GORM.Model(&modLogs).Preload("Warns").Preload("Mutes").Preload("Kicks").Preload("Bans").First(&modLogs).Error
 	if err != nil {
-		log.Error(err)
+		log.Warn(err)
 		return []ModLogEntry{}, nil
 	}
 
 	for _, entry := range modLogs.Warns {
-		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
-		member, err := bot.GetMember(guildID, authorID)
-		if err != nil {
+		authorID, parseErr := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, parseErr := bot.GetMember(guildID, authorID)
+		if parseErr != nil {
 			return nil, err
 		}
 
@@ -1958,9 +1974,9 @@ func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
 	}
 
 	for _, entry := range modLogs.Mutes {
-		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
-		member, err := bot.GetMember(guildID, authorID)
-		if err != nil {
+		authorID, parseErr := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, parseErr := bot.GetMember(guildID, authorID)
+		if parseErr != nil {
 			return nil, err
 		}
 
@@ -1968,9 +1984,9 @@ func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
 	}
 
 	for _, entry := range modLogs.Kicks {
-		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
-		member, err := bot.GetMember(guildID, authorID)
-		if err != nil {
+		authorID, parseErr := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, parseErr := bot.GetMember(guildID, authorID)
+		if parseErr != nil {
 			return nil, err
 		}
 
@@ -1978,9 +1994,9 @@ func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
 	}
 
 	for _, entry := range modLogs.Bans {
-		authorID, err := strconv.ParseInt(entry.AuthorID, 10, 64)
-		member, err := bot.GetMember(guildID, authorID)
-		if err != nil {
+		authorID, parseErr := strconv.ParseInt(entry.AuthorID, 10, 64)
+		member, parseErr := bot.GetMember(guildID, authorID)
+		if parseErr != nil {
 			return nil, err
 		}
 
@@ -2014,7 +2030,7 @@ func generateWatchlistEmbed(guildID int64, user *discordgo.User, author *discord
 			URL: discordgo.EndpointUserAvatar(user.ID, user.Avatar),
 		},
 		Color:       16777215,
-		Description: fmt.Sprintf(">>> **User:** %s (%d)\n**Reason:** %s\n **Ping Toggle:** %s", user.Mention(), user.ID, data.Reason, strconv.FormatBool(data.Pingable)),
+		Description: fmt.Sprintf(">>> **User:** %s (%d)\n**Reason:** %s\n **Ping Toggle:** %s", user.Mention(), user.ID, data.Reason, data.Ping),
 		Timestamp:   time.Now().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    fmt.Sprintf("Watchlist entry last updated by %s", author.Globalname),
@@ -2024,32 +2040,28 @@ func generateWatchlistEmbed(guildID int64, user *discordgo.User, author *discord
 
 	punishList, err := generatePunishList(guildID, uint64(user.ID))
 	if err != nil {
-		log.Error(err)
+		log.Warn("No punishments found")
 	} else {
 		embed.Fields = append(embed.Fields, generatePunishments(punishList)...)
 	}
 
 	if len(data.Feuds) > 0 {
 		for _, feud := range data.Feuds {
-			if err != nil {
-				log.Error(err)
-			} else {
-				fields := []*discordgo.MessageEmbedField{
-					{Name: "Feuding User", Value: feud.FeudingUserName, Inline: true},
-					{Name: "Reason", Value: feud.Reason, Inline: true},
-					{Name: "Link", Value: feud.MessageLink, Inline: true},
-				}
-				embed.Fields = append(embed.Fields, fields...)
+			fields := []*discordgo.MessageEmbedField{
+				{Name: "Feuding User", Value: feud.FeudingUserName, Inline: true},
+				{Name: "Reason", Value: feud.Reason, Inline: true},
+				{Name: "Link", Value: feud.MessageLink, Inline: true},
 			}
+			embed.Fields = append(embed.Fields, fields...)
 		}
 	}
 
 	if len(data.VerbalWarnings) > 0 {
 		for _, verbalWarning := range data.VerbalWarnings {
 			if verbalWarning.AuthorID != 0 {
-				authorMember, err := bot.GetMember(guildID, verbalWarning.AuthorID)
-				if err != nil {
-					log.Error(err, guildID, verbalWarning)
+				authorMember, memberErr := bot.GetMember(guildID, verbalWarning.AuthorID)
+				if memberErr != nil {
+					log.Error(memberErr, guildID, verbalWarning)
 				} else {
 					fields := []*discordgo.MessageEmbedField{
 						{Name: "Verbal Warning", Value: verbalWarning.Reason, Inline: true},

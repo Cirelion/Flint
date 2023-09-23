@@ -111,9 +111,7 @@ func createPoll(data *dcmd.Data) (interface{}, error) {
 		}
 	}
 
-	_, err := CreatePollEmbed(data.Session, data.SlashCommandTriggerData.Interaction.Token, data.GuildData.GS.ID, data.ChannelID, votes, func(p *PollMessage, votes []Vote) (*discordgo.MessageEmbed, error) {
-		return PollEmbed(question, data.Author, votes)
-	})
+	_, err := CreatePollEmbed(data.Session, data.SlashCommandTriggerData.Interaction.Token, data.GuildData.GS.ID, data.Author, question, votes)
 
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to add poll")
@@ -123,7 +121,6 @@ func createPoll(data *dcmd.Data) (interface{}, error) {
 }
 
 func createStrawPoll(data *dcmd.Data) (interface{}, error) {
-	var votes []Vote
 	question := data.Args[0].Str()
 	options := data.Args[1:]
 	maxOptions := data.Switch("maxOptions").Int()
@@ -137,10 +134,7 @@ func createStrawPoll(data *dcmd.Data) (interface{}, error) {
 
 	selectMenuOptions := generateSelectMenuOptions(options)
 
-	_, err := CreateStrawPollEmbed(data.Session, data.SlashCommandTriggerData.Interaction.Token, data.GuildData.GS.ID, data.ChannelID, votes, selectMenuOptions, maxOptions, func(p *PollMessage, votes []Vote) (*discordgo.MessageEmbed, error) {
-		return StrawPollEmbed(question, options, data.Author, votes)
-	})
-
+	_, err := CreateStrawPollEmbed(data.Session, data.SlashCommandTriggerData.Interaction.Token, data.GuildData.GS.ID, data.Author, question, selectMenuOptions, maxOptions)
 	if err != nil {
 		return nil, errors.WrapIf(err, "failed to add straw poll")
 	}
@@ -173,20 +167,31 @@ func createYesOrNoButtons() []discordgo.MessageComponent {
 	}
 }
 
-func createSelectMenu(options []discordgo.SelectMenuOption, maxOptions int) []discordgo.MessageComponent {
+func createSelectMenu(options []SelectMenuOption, maxOptions int) []discordgo.MessageComponent {
 	placeholder := "Select an option to vote for."
 
 	if maxOptions > 1 {
 		placeholder = fmt.Sprintf("Select up to %d options to vote for.", maxOptions)
+	}
+	var selectOptions []discordgo.SelectMenuOption
+
+	for _, option := range options {
+		selectOptions = append(selectOptions, discordgo.SelectMenuOption{
+			Label: option.Label,
+			Value: option.Value,
+			Emoji: discordgo.ComponentEmoji{
+				Name: option.EmojiName,
+			},
+		})
 	}
 
 	return []discordgo.MessageComponent{
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.SelectMenu{
-					CustomID:    "strawpoll_selectmenu",
+					CustomID:    "straw_poll_select_menu",
 					Placeholder: placeholder,
-					Options:     options,
+					Options:     selectOptions,
 					MaxValues:   maxOptions,
 				},
 			},
@@ -194,17 +199,15 @@ func createSelectMenu(options []discordgo.SelectMenuOption, maxOptions int) []di
 	}
 }
 
-func CreatePollEmbed(session *discordgo.Session, token string, guildID int64, channelID int64, votes []Vote, pollFunc PollFunc) (*PollMessage, error) {
+func CreatePollEmbed(session *discordgo.Session, token string, guildID int64, author *discordgo.User, question string, votes []Vote) (*PollMessage, error) {
 	pm := &PollMessage{
-		GuildID:        guildID,
-		ChannelID:      channelID,
-		Votes:          votes,
-		lastUpdateTime: time.Now(),
-		stopCh:         make(chan bool),
-		HandleVote:     pollFunc,
+		GuildID:  guildID,
+		AuthorID: author.ID,
+		Question: question,
+		Votes:    votes,
 	}
 
-	embed, err := pollFunc(pm, votes)
+	embed, err := PollEmbed(question, author, votes)
 	if err != nil {
 		return nil, err
 	}
@@ -220,26 +223,25 @@ func CreatePollEmbed(session *discordgo.Session, token string, guildID int64, ch
 	}
 
 	pm.MessageID = msg.ID
-	pm.LastResponse = embed
-
-	menusLock.Lock()
-	activePollMessagesMap[pm.MessageID] = pm
-	menusLock.Unlock()
+	err = common.GORM.Model(&pm).Save(&pm).Error
+	if err != nil {
+		return nil, err
+	}
 
 	return pm, nil
 }
 
-func CreateStrawPollEmbed(session *discordgo.Session, token string, guildID int64, channelID int64, votes []Vote, options []discordgo.SelectMenuOption, maxOptions int, pollFunc PollFunc) (*PollMessage, error) {
+func CreateStrawPollEmbed(session *discordgo.Session, token string, guildID int64, author *discordgo.User, question string, options []SelectMenuOption, maxOptions int) (*PollMessage, error) {
 	pm := &PollMessage{
-		GuildID:        guildID,
-		ChannelID:      channelID,
-		Votes:          votes,
-		lastUpdateTime: time.Now(),
-		stopCh:         make(chan bool),
-		HandleVote:     pollFunc,
+		GuildID:     guildID,
+		AuthorID:    author.ID,
+		Question:    question,
+		IsStrawPoll: true,
+		Options:     options,
+		MaxOptions:  maxOptions,
 	}
 
-	embed, err := pollFunc(pm, votes)
+	embed, err := StrawPollEmbed(question, options, author, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -255,11 +257,11 @@ func CreateStrawPollEmbed(session *discordgo.Session, token string, guildID int6
 	}
 
 	pm.MessageID = msg.ID
-	pm.LastResponse = embed
+	err = common.GORM.Model(&pm).Save(&pm).Error
 
-	menusLock.Lock()
-	activePollMessagesMap[pm.MessageID] = pm
-	menusLock.Unlock()
+	if err != nil {
+		return nil, err
+	}
 
 	return pm, nil
 }
@@ -274,7 +276,8 @@ func PollEmbed(question string, author *discordgo.User, votes []Vote) (*discordg
 	nayPercentage := float64(0)
 
 	for _, value := range votes {
-		if value.vote[0] == 0 {
+		parsedVotes := strings.Split(value.Vote, ", ")
+		if parsedVotes[0] == "0" {
 			yay++
 		} else {
 			nay++
@@ -307,19 +310,20 @@ func PollEmbed(question string, author *discordgo.User, votes []Vote) (*discordg
 	return &embed, nil
 }
 
-func StrawPollEmbed(question string, options []*dcmd.ParsedArg, author *discordgo.User, votes []Vote) (*discordgo.MessageEmbed, error) {
-	selectMenuOptions := generateSelectMenuOptions(options)
-
+func StrawPollEmbed(question string, options []SelectMenuOption, author *discordgo.User, votes []Vote) (*discordgo.MessageEmbed, error) {
 	var description string
-	for i, option := range selectMenuOptions {
+
+	for i, option := range options {
 		voteString := "votes"
 		totalCount := 0
 		voteCount := 0
 		votePercentage := float64(0)
 
 		for _, value := range votes {
-			totalCount += len(value.vote)
-			for _, voteNum := range value.vote {
+			parsedVotes := strings.Split(value.Vote, ", ")
+			totalCount += len(parsedVotes)
+			for _, parsedVote := range parsedVotes {
+				voteNum, _ := strconv.Atoi(parsedVote)
 				if voteNum == i {
 					voteCount++
 				}
@@ -350,8 +354,8 @@ func StrawPollEmbed(question string, options []*dcmd.ParsedArg, author *discordg
 	return &embed, nil
 }
 
-func generateSelectMenuOptions(options []*dcmd.ParsedArg) []discordgo.SelectMenuOption {
-	var selectMenuOptions []discordgo.SelectMenuOption
+func generateSelectMenuOptions(options []*dcmd.ParsedArg) []SelectMenuOption {
+	var selectMenuOptions []SelectMenuOption
 	for i, option := range options {
 		if option.Str() == "" || i >= len(pollReactions) {
 			options = options[:i]
@@ -360,12 +364,10 @@ func generateSelectMenuOptions(options []*dcmd.ParsedArg) []discordgo.SelectMenu
 	}
 
 	for i, option := range options {
-		selectMenuOptions = append(selectMenuOptions, discordgo.SelectMenuOption{
-			Label: option.Str(),
-			Value: strconv.Itoa(i),
-			Emoji: discordgo.ComponentEmoji{
-				Name: pollReactions[i],
-			},
+		selectMenuOptions = append(selectMenuOptions, SelectMenuOption{
+			Label:     option.Str(),
+			Value:     strconv.Itoa(i),
+			EmojiName: pollReactions[i],
 		})
 	}
 

@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type Attachment struct {
+	ID        string `gorm:"primary_key"`
+	MessageID int64
+	Url       string
+	ProxyUrl  string
+}
 type Message struct {
 	MessageID int64 `gorm:"primary_key"`
 	ChannelID int64
@@ -17,7 +23,7 @@ type Message struct {
 
 	Content           string
 	OriginalContent   string
-	AttachmentUrl     string
+	Attachments       []Attachment `gorm:"foreignKey:MessageID"`
 	StickerID         int64
 	StickerName       string
 	StickerFormatType discordgo.StickerFormatType

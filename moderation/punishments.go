@@ -261,7 +261,7 @@ func DeleteMessages(guildID, channelID int64, filterUser int64, deleteNum, fetch
 			}
 
 			toDelete = append(toDelete, msgs[i].ID)
-			//log.Println("Deleting", msgs[i].ContentWithMentionsReplaced())
+
 			if len(toDelete) >= deleteNum || len(toDelete) >= 100 {
 				break
 			}
@@ -677,7 +677,7 @@ func WarnUser(config *Config, guildID int64, channel *dstate.ChannelState, msg *
 	}
 
 	if config.WarnSendToModlog && config.ActionChannel != "" {
-		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, proof, 43830*time.Minute)
+		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, proof, 4*7*24*time.Hour)
 		if err != nil {
 			return common.ErrWithCaller(err)
 		}

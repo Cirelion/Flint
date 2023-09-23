@@ -234,15 +234,11 @@ type WatchList struct {
 	Feuds             []Feud          `gorm:"foreignKey:WatchListID;references:UserID"`
 	VerbalWarnings    []VerbalWarning `gorm:"foreignKey:WatchListID;references:UserID"`
 
-	Pingable     bool `gorm:"default:false"`
+	Ping         string
 	LastPingedAt time.Time
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-func (w *WatchList) TableName() string {
-	return "moderation_watchlist"
 }
 
 type Feud struct {
@@ -259,10 +255,6 @@ type Feud struct {
 	UpdatedAt time.Time
 }
 
-func (f *Feud) TableName() string {
-	return "moderation_watchlist_feuds"
-}
-
 type VerbalWarning struct {
 	ID          uint  `gorm:"primary_key"`
 	GuildID     int64 `gorm:"index"`
@@ -274,10 +266,6 @@ type VerbalWarning struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-func (f *VerbalWarning) TableName() string {
-	return "moderation_watchlist_verbal_warnings"
 }
 
 type MuteModel struct {
