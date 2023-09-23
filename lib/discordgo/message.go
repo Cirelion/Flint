@@ -20,6 +20,7 @@ import (
 
 // MessageType is the type of Message
 type MessageType int
+type StickerFormatType int
 
 // Block contains the valid known MessageType values
 const (
@@ -45,6 +46,11 @@ const (
 	MessageTypeApplicationCommand                      MessageType = 20
 	MessageTypeThreadStarterMessage                    MessageType = 21
 	MessageTypeGuildInviteReminder                     MessageType = 22
+
+	StickerPNG    StickerFormatType = 1
+	StickerAPNG   StickerFormatType = 2
+	StickerLOTTIE StickerFormatType = 3
+	StickerGIF    StickerFormatType = 4
 )
 
 // IsSystem returns wether the message type is a system message type, a message created by discord
@@ -135,6 +141,8 @@ type Message struct {
 
 	WebhookID int64 `json:"webhook_id,string"`
 
+	StickerItems []MessageSticker `json:"sticker_items"`
+
 	Member *Member `json:"member"`
 
 	// MessageReference contains reference data sent with crossposted or reply messages.
@@ -158,8 +166,14 @@ type Message struct {
 	// This is a combination of bit masks; the presence of a certain permission can
 	// be checked by performing a bitwise AND between this int and the flag.
 	Flags MessageFlags `json:"flags"`
-  
+
 	Activity *MessageActivity `json:"activity"`
+}
+
+type MessageSticker struct {
+	ID         int64             `json:"id,string"`
+	Name       string            `json:"name"`
+	FormatType StickerFormatType `json:"format_type"`
 }
 
 func (m *Message) GetGuildID() int64 {

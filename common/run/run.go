@@ -98,7 +98,7 @@ func Init() {
 		os.Exit(1)
 	}
 
-	log.Info("Starting YAGPDB version " + common.VERSION)
+	log.Info("Starting Flint version " + common.VERSION)
 
 	err := common.CoreInit(true)
 	if err != nil {
@@ -182,9 +182,9 @@ func Run() {
 	listenSignal()
 }
 
-// Gracefull shutdown
+// Graceful shutdown
 // Why we sleep before we stop? just to be on the safe side in case there's some stuff that's not fully done yet
-// running in seperate untracked goroutines
+// running in separate untracked goroutines
 func listenSignal() {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

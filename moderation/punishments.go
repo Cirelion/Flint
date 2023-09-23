@@ -677,7 +677,7 @@ func WarnUser(config *Config, guildID int64, channel *dstate.ChannelState, msg *
 	}
 
 	if config.WarnSendToModlog && config.ActionChannel != "" {
-		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, proof, 10080*time.Minute)
+		err = CreateModlogEmbed(config, author, MAWarned, target, message, warning.LogsLink, proof, 43830*time.Minute)
 		if err != nil {
 			return common.ErrWithCaller(err)
 		}

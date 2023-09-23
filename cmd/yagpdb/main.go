@@ -8,11 +8,11 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/common/prom"
 	"github.com/botlabs-gg/yagpdb/v2/common/run"
 	"github.com/botlabs-gg/yagpdb/v2/lib/confusables"
+	"github.com/botlabs-gg/yagpdb/v2/messagelogs"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands/polls"
 	"github.com/botlabs-gg/yagpdb/v2/web/discorddata"
 
 	// Core yagpdb packages
-
 	"github.com/botlabs-gg/yagpdb/v2/admin"
 	"github.com/botlabs-gg/yagpdb/v2/bot/paginatedmessages"
 	"github.com/botlabs-gg/yagpdb/v2/common/internalapi"
@@ -20,8 +20,7 @@ import (
 
 	// Plugin imports
 	"github.com/botlabs-gg/yagpdb/v2/automod"
-	//"github.com/botlabs-gg/yagpdb/v2/autorole"
-	//"github.com/botlabs-gg/yagpdb/v2/cah"
+
 	"github.com/botlabs-gg/yagpdb/v2/commands"
 	"github.com/botlabs-gg/yagpdb/v2/customcommands"
 	"github.com/botlabs-gg/yagpdb/v2/discordlogger"
@@ -30,21 +29,12 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/notifications"
 	"github.com/botlabs-gg/yagpdb/v2/premium"
 	"github.com/botlabs-gg/yagpdb/v2/premium/patreonpremiumsource"
-	//"github.com/botlabs-gg/yagpdb/v2/reddit"
-	//"github.com/botlabs-gg/yagpdb/v2/reminders"
 	"github.com/botlabs-gg/yagpdb/v2/reputation"
-	//"github.com/botlabs-gg/yagpdb/v2/rolecommands"
-	//"github.com/botlabs-gg/yagpdb/v2/rsvp"
 	"github.com/botlabs-gg/yagpdb/v2/safebrowsing"
 	"github.com/botlabs-gg/yagpdb/v2/serverstats"
-	//"github.com/botlabs-gg/yagpdb/v2/soundboard"
 	"github.com/botlabs-gg/yagpdb/v2/stdcommands"
-	//"github.com/botlabs-gg/yagpdb/v2/streaming"
 	//"github.com/botlabs-gg/yagpdb/v2/tickets"
-	//"github.com/botlabs-gg/yagpdb/v2/timezonecompanion"
-	//"github.com/botlabs-gg/yagpdb/v2/twitter"
 	"github.com/botlabs-gg/yagpdb/v2/verification"
-	//"github.com/botlabs-gg/yagpdb/v2/youtube"
 	// External plugins
 )
 
@@ -67,25 +57,17 @@ func main() {
 	serverstats.RegisterPlugin()
 	notifications.RegisterPlugin()
 	customcommands.RegisterPlugin()
-	//reddit.RegisterPlugin()
 	moderation.RegisterPlugin()
 	reputation.RegisterPlugin()
-	//streaming.RegisterPlugin()
 	automod.RegisterPlugin()
 	logs.RegisterPlugin()
+	messagelogs.RegisterPlugin()
 	autorole.RegisterPlugin()
-	//reminders.RegisterPlugin()
-	//soundboard.RegisterPlugin()
-	//youtube.RegisterPlugin()
-	//rolecommands.RegisterPlugin()
 	//tickets.RegisterPlugin()
 	verification.RegisterPlugin()
 	premium.RegisterPlugin()
 	patreonpremiumsource.RegisterPlugin()
 	scheduledevents2.RegisterPlugin()
-	//twitter.RegisterPlugin()
-	//rsvp.RegisterPlugin()
-	//timezonecompanion.RegisterPlugin()
 	admin.RegisterPlugin()
 	internalapi.RegisterPlugin()
 	prom.RegisterPlugin()

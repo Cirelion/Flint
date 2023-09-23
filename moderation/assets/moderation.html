@@ -44,6 +44,10 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                             Warnings <span
                                 class="indicator indicator-{{if .ModConfig.WarnCommandsEnabled}}success{{else}}danger{{end}}"></span>
                         </a></li>
+                    <li class="nav-item"><a class="nav-link" href="#messages" aria-controls="messages" role="tab"
+                                            data-toggle="tab">
+                        Message logs
+                    </a></li>
                 </ul>
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="general">{{template "moderation_general" .}}</div>
@@ -52,6 +56,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                     <div role="tabpanel" class="tab-pane" id="kick">{{template "moderation_kick" .}}</div>
                     <div role="tabpanel" class="tab-pane" id="ban">{{template "moderation_ban" .}}</div>
                     <div role="tabpanel" class="tab-pane" id="warn">{{template "moderation_warn" .}}</div>
+                    <div role="tabpanel" class="tab-pane" id="messages">{{template "moderation_messages" .}}</div>
                 </div>
             </div>
         </div>
@@ -127,7 +132,6 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.ActionChannel true "None"}}
             </select>
         </div>
-        <hr />
 
         <div class="form-group">
             <label>Channel to send error messages of the moderation DMs</label>
@@ -167,6 +171,12 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
             <label>Channel to send messages for the mods/admins in (reports and such)</label>
             <select class="form-control" name="ReportChannel" data-requireperms-send>
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.ReportChannel true "None"}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Watchlist monitoring channel</label>
+            <select class="form-control" name="WatchListChannel" data-requireperms-send>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.WatchListChannel true "None"}}
             </select>
         </div>
         <hr />
@@ -256,7 +266,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
         <hr />
 
         <div class="form-group">
-            <label for="MuteRole">Mute role</label>
+            <label >Mute role</label>
             <select class="form-control" name="MuteRole">
                 {{roleOptions .ActiveGuild.Roles .HighestRole .ModConfig.MuteRole "None"}}
             </select>
@@ -492,6 +502,41 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
     <div class="col">
         <a class="mb-1 mt-1 mr-1 modal-basic btn btn-info btn-sm" href="#clear-server-warnings-modal">Delete all
             warnings</a>
+    </div>
+</div>
+{{end}}
+
+{{define "moderation_messages"}}
+<p>Configuration for the message deletion logs</p>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="message-ignore-channels">
+            <label>Don't log messages in these channels</label><br>
+            <select class="multiselect" name="IgnoreChannels" data-plugin-multiselect multiple="multiple">
+                {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.IgnoreChannels}}
+            </select>
+        </div>
+        <div class="form-group" id="message-ignore-categories">
+            <label>Don't log messages in these categories</label><br>
+            <select class="multiselect" name="IgnoreCategories" data-plugin-multiselect multiple="multiple">
+                {{catChannelOptionsMulti .ActiveGuild.Channels .ModConfig.IgnoreCategories}}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-9">
+        <div class="form-group">
+            <label>Channel to log edited messages</label>
+            <select class="form-control" name="EditLogChannel" data-requireperms-embed>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.EditLogChannel true "None"}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Channel to log deleted messages</label>
+            <select class="form-control" name="DeleteLogChannel" data-requireperms-embed>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.DeleteLogChannel true "None"}}
+            </select>
+        </div>
     </div>
 </div>
 {{end}}

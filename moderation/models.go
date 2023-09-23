@@ -59,16 +59,23 @@ type Config struct {
 	WarnSendToModlog       bool
 	WarnMessage            string `valid:"template,5000"`
 
+	// Message logs
+	EditLogChannel   string        `valid:"channel,true"`
+	DeleteLogChannel string        `valid:"channel,true"`
+	IgnoreChannels   pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
+	IgnoreCategories pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
+
 	// Misc
-	CleanEnabled  bool
-	ReportEnabled bool
-	ActionChannel string `valid:"channel,true"`
-	ReportChannel string `valid:"channel,true"`
-	ErrorChannel  string `valid:"channel,true"`
-	LogUnbans     bool
-	LogBans       bool
-	LogKicks      bool `gorm:"default:true"`
-	LogTimeouts   bool
+	CleanEnabled     bool
+	ReportEnabled    bool
+	ActionChannel    string `valid:"channel,true"`
+	ReportChannel    string `valid:"channel,true"`
+	WatchListChannel string `valid:"channel,true"`
+	ErrorChannel     string `valid:"channel,true"`
+	LogUnbans        bool
+	LogBans          bool
+	LogKicks         bool `gorm:"default:true"`
+	LogTimeouts      bool
 
 	GiveRoleCmdEnabled bool
 	GiveRoleCmdModlog  bool
@@ -85,8 +92,22 @@ func (c *Config) IntActionChannel() (r int64) {
 	return
 }
 
+func (c *Config) IntEditLogChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.EditLogChannel, 10, 64)
+	return
+}
+
+func (c *Config) IntDeleteLogChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.DeleteLogChannel, 10, 64)
+	return
+}
+
 func (c *Config) IntReportChannel() (r int64) {
 	r, _ = strconv.ParseInt(c.ReportChannel, 10, 64)
+	return
+}
+func (c *Config) IntWatchListChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.WatchListChannel, 10, 64)
 	return
 }
 

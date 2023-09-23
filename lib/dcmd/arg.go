@@ -143,7 +143,7 @@ func (p *ParsedArg) Float64() float64 {
 	case float32:
 		return float64(t)
 	case float64:
-		return float64(t)
+		return t
 	case uint:
 		return float64(t)
 	case uint32:
@@ -544,13 +544,13 @@ func (i *IntArg) ParseFromMessage(def *ArgDef, part string, data *Data) (interfa
 
 func (i *IntArg) ParseFromInteraction(def *ArgDef, data *Data, options *SlashCommandsParseOptions) (val interface{}, err error) {
 
-	any, err := options.ExpectAny(def.Name)
+	anyV, err := options.ExpectAny(def.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	var v int64
-	switch t := any.(type) {
+	switch t := anyV.(type) {
 	case string:
 		v, err = strconv.ParseInt(t, 10, 64)
 		if err != nil {
