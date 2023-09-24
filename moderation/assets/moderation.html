@@ -539,4 +539,21 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
         </div>
     </div>
 </div>
+<p>Heartboard configuration</p>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="heart-board-channel">
+            <label>Heart board channel</label><br>
+            <select class="multiselect" name="HeartBoardChannel" data-plugin-multiselect>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.HeartBoardChannel true "None"}}
+            </select>
+        </div>
+        <div class="form-group" id="showcase-channels">
+            <label>Showcase channels</label><br>
+            <select class="multiselect" name="ShowcaseChannels" data-plugin-multiselect multiple="multiple">
+                {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.ShowcaseChannels}}
+            </select>
+        </div>
+    </div>
+</div>
 {{end}}

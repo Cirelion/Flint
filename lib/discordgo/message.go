@@ -115,7 +115,8 @@ type Message struct {
 
 	// The author of the message. This is not guaranteed to be a
 	// valid user (webhook-sent messages do not possess a full author).
-	Author *User `json:"author"`
+	Author *User  `json:"author"`
+	Name   string `json:"name"`
 
 	// A list of attachments present in the message.
 	Attachments []*MessageAttachment `json:"attachments"`

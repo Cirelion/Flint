@@ -1866,25 +1866,6 @@ var ModerationCommands = []*commands.YAGCommand{
 			return "Done.", nil
 		},
 	},
-	{
-		CustomEnabled:            true,
-		CmdCategory:              commands.CategoryModeration,
-		Name:                     "test",
-		Description:              "Adds a mod log entry to the user",
-		RequireDiscordPerms:      []int64{discordgo.PermissionAdministrator},
-		RequiredDiscordPermsHelp: "Administrator",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		SlashCommandEnabled:      true,
-		DefaultEnabled:           true,
-		IsResponseEphemeral:      true,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			if parsed.TriggerType == 2 {
-				return getMessageReferenceContent(parsed.TraditionalTriggerData)
-			}
-
-			return "No reference found or / command used.", nil
-		},
-	},
 }
 
 type EphemeralOrGuild struct {
