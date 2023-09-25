@@ -48,3 +48,17 @@ func GetMembers(guildID int64, userIDs ...int64) ([]*dstate.MemberState, error) 
 
 	return result, nil
 }
+
+func GetName(member *dstate.MemberState) string {
+	if member.Member != nil {
+		if member.Member.Nick != "" {
+			return member.Member.Nick
+		}
+	}
+
+	if member.User.Globalname != "" {
+		return member.User.Globalname
+	}
+
+	return member.User.Username
+}

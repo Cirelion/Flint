@@ -9,7 +9,6 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
 	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
 	"github.com/botlabs-gg/yagpdb/v2/moderation"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"regexp"
 	"slices"
@@ -58,7 +57,7 @@ func handleReaction(evt *eventsystem.EventData) {
 	case *discordgo.MessageReactionRemove:
 		reaction = e.MessageReaction
 	}
-	log.Println(reaction.Emoji.Name)
+
 	if reaction.GuildID == 0 {
 		return
 	}
@@ -133,11 +132,11 @@ func handleReaction(evt *eventsystem.EventData) {
 			}
 		}
 	} else if showcase.HeartBoardMessageID != 1 {
+		showcase.HeartBoardMessageID = 1
 		msgErr := common.BotSession.ChannelMessageDelete(config.HeartBoardChannel, showcase.HeartBoardMessageID)
 		if msgErr != nil {
 			logger.Error(msgErr)
 		}
-		showcase.HeartBoardMessageID = 1
 	}
 
 	err = common.GORM.Model(showcase).Update([]interface{}{showcase}).Error
@@ -149,7 +148,7 @@ func handleReaction(evt *eventsystem.EventData) {
 func generateEmbed(showcase *Showcase) *discordgo.MessageEmbed {
 	member, err := bot.GetMember(showcase.GuildID, showcase.AuthorID)
 	if err != nil {
-		log.Error("memberErr: ", showcase.GuildID, showcase.AuthorID, err)
+		logger.Error("memberErr: ", showcase.GuildID, showcase.AuthorID, err)
 		return nil
 	}
 
@@ -162,11 +161,11 @@ func generateEmbed(showcase *Showcase) *discordgo.MessageEmbed {
 			URL: showcase.ImageUrl,
 		},
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    member.User.Username,
+			Name:    bot.GetName(member),
 			IconURL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
 		},
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("❤️ %d | Created by: %s", showcase.Approval, member.User.Globalname),
+			Text: fmt.Sprintf("❤️ %d | Created by: %s", showcase.Approval, member.User.Username),
 		},
 	}
 

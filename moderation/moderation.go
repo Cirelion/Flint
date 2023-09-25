@@ -52,7 +52,7 @@ func RegisterPlugin() {
 	common.RegisterPlugin(plugin)
 
 	configstore.RegisterConfig(configstore.SQL, &Config{})
-	common.GORM.AutoMigrate(&Config{}, &WarningModel{}, &MuteModel{}, &WatchList{}, &Feud{}, &VerbalWarning{}, &ModLog{}, &Warn{}, &Mute{}, &Kick{}, &Ban{})
+	common.GORM.AutoMigrate(&Config{}, &WarningModel{}, &MuteModel{}, &WatchList{}, &Feud{}, &VerbalWarning{}, &ModLog{}, &Warn{}, &Mute{}, &Kick{}, &Ban{}, &OnDuty{})
 }
 
 func getConfigIfNotSet(guildID int64, config *Config) (*Config, error) {

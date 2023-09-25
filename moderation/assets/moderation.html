@@ -46,7 +46,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                         </a></li>
                     <li class="nav-item"><a class="nav-link" href="#messages" aria-controls="messages" role="tab"
                                             data-toggle="tab">
-                        Message logs
+                        Other
                     </a></li>
                 </ul>
                 <div class="tab-content">
@@ -507,6 +507,64 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
 {{end}}
 
 {{define "moderation_messages"}}
+<p>On Duty configuration</p>
+<div class="row">
+    <div class="col-sm-12">
+        <div class="form-group">
+            <label>On Duty role</label>
+            <select class="form-control" name="OnDutyRole">
+                {{roleOptions .ActiveGuild.Roles .HighestRole .ModConfig.OnDutyRole "None"}}
+            </select>
+        </div>
+        <hr />
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" >
+            <label>On Duty channel 1</label><br>
+            <select class="form-control" name="OnDutyChannelOne">
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.OnDutyChannelOne true "None"}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>On Duty channel 1 description</label>
+            <textarea rows="1" class="form-control" name="OnDutyChannelOneDescription">{{or .ModConfig.OnDutyChannelOneDescription ""}}</textarea>
+        </div>
+    </div>
+    <hr />
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" >
+            <label>On Duty channel 2</label><br>
+            <select class="form-control" name="OnDutyChannelTwo">
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.OnDutyChannelTwo true "None"}}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>On Duty channel 2 description</label>
+            <textarea rows="1" class="form-control" name="OnDutyChannelTwoDescription">{{or .ModConfig.OnDutyChannelTwoDescription ""}}</textarea>
+        </div>
+    </div>
+</div>
+<hr />
+
+<p>Heartboard configuration</p>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="heart-board-channel">
+            <label>Heart board channel</label><br>
+            <select class="multiselect" name="HeartBoardChannel" data-plugin-multiselect>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.HeartBoardChannel true "None"}}
+            </select>
+        </div>
+        <div class="form-group" id="showcase-channels">
+            <label>Showcase channels</label><br>
+            <select class="multiselect" name="ShowcaseChannels" data-plugin-multiselect multiple="multiple">
+                {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.ShowcaseChannels}}
+            </select>
+        </div>
+    </div>
+</div>
+<hr />
+
 <p>Configuration for the message deletion logs</p>
 <div class="row">
     <div class="col-sm-6 col-md-3">
@@ -535,23 +593,6 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
             <label>Channel to log deleted messages</label>
             <select class="form-control" name="DeleteLogChannel" data-requireperms-embed>
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.DeleteLogChannel true "None"}}
-            </select>
-        </div>
-    </div>
-</div>
-<p>Heartboard configuration</p>
-<div class="row">
-    <div class="col-sm-6 col-md-3">
-        <div class="form-group" id="heart-board-channel">
-            <label>Heart board channel</label><br>
-            <select class="multiselect" name="HeartBoardChannel" data-plugin-multiselect>
-                {{textChannelOptions .ActiveGuild.Channels .ModConfig.HeartBoardChannel true "None"}}
-            </select>
-        </div>
-        <div class="form-group" id="showcase-channels">
-            <label>Showcase channels</label><br>
-            <select class="multiselect" name="ShowcaseChannels" data-plugin-multiselect multiple="multiple">
-                {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.ShowcaseChannels}}
             </select>
         </div>
     </div>

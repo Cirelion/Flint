@@ -1183,7 +1183,7 @@ func (g *GatewayConnection) handleHello(event *Event) error {
 		return err
 	}
 
-	g.log(LogInformational, "receivied hello, heartbeat_interval: %d, _trace: %v", h.HeartbeatInterval, h.Trace)
+	g.log(LogInformational, "received hello, heartbeat_interval: %d, _trace: %v", h.HeartbeatInterval, h.Trace)
 
 	go g.heartbeater.Run(time.Duration(h.HeartbeatInterval) * time.Millisecond)
 

@@ -1866,6 +1866,87 @@ var ModerationCommands = []*commands.YAGCommand{
 			return "Done.", nil
 		},
 	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "OnDuty",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		ContextMenuMessage:       true,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			guildID := parsed.GuildData.GS.ID
+			config, err := GetConfig(guildID)
+			member, err := bot.GetMember(guildID, parsed.Author.ID)
+
+			if err != nil {
+				return nil, err
+			}
+			onDuty := &OnDuty{UserID: uint64(member.User.ID)}
+			err = common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
+			if err != nil {
+				return nil, err
+			}
+
+			if common.ContainsInt64Slice(member.Member.Roles, config.IntOnDutyRole()) {
+				err = common.BotSession.GuildMemberRoleRemove(guildID, member.User.ID, config.IntOnDutyRole())
+				onDuty.OnDuty = false
+			} else {
+				err = common.BotSession.GuildMemberRoleAdd(guildID, member.User.ID, config.IntOnDutyRole())
+				onDuty.OnDuty = true
+				onDuty.OnDutySetAt = time.Now()
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			err = common.GORM.Model(onDuty).Update(onDuty).Error
+			if err != nil {
+				return nil, err
+			}
+
+			if onDuty.OnDuty {
+				return "You are now On Duty!", nil
+			}
+
+			return "You are now Off Duty!", nil
+		},
+	},
+	{
+		CustomEnabled:            true,
+		CmdCategory:              commands.CategoryModeration,
+		Name:                     "SetOnDutyDuration",
+		Description:              "Sets the duration until you are automatically put off duty.",
+		RequireDiscordPerms:      []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp: "KickMembers",
+		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
+		SlashCommandEnabled:      true,
+		DefaultEnabled:           true,
+		IsResponseEphemeral:      true,
+		RequiredArgs:             1,
+		Arguments: []*dcmd.ArgDef{
+			{Name: "Duration", Type: &commands.DurationArg{}},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			duration := parsed.Args[0].Value.(time.Duration)
+			onDuty := &OnDuty{UserID: uint64(parsed.Author.ID)}
+			err := common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
+			if err != nil {
+				return nil, err
+			}
+
+			err = common.GORM.Model(onDuty).Update("OnDutyDuration", duration).Error
+			if err != nil {
+				return nil, err
+			}
+
+			return fmt.Sprintf("Set On Duty duration to %s", common.HumanizeDuration(common.DurationPrecisionHours, duration)), nil
+		},
+	},
 }
 
 type EphemeralOrGuild struct {

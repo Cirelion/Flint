@@ -69,6 +69,13 @@ type Config struct {
 	HeartBoardChannel int64         `valid:"channel,true"`
 	ShowcaseChannels  pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
+	//On Duty
+	OnDutyRole                  string `valid:"role,true"`
+	OnDutyChannelOne            string `valid:"channel,true"`
+	OnDutyChannelOneDescription string `valid:"template,5000"`
+	OnDutyChannelTwo            string `valid:"channel,true"`
+	OnDutyChannelTwoDescription string `valid:"template,5000"`
+
 	// Misc
 	CleanEnabled     bool
 	ReportEnabled    bool
@@ -88,6 +95,20 @@ type Config struct {
 
 func (c *Config) IntMuteRole() (r int64) {
 	r, _ = strconv.ParseInt(c.MuteRole, 10, 64)
+	return
+}
+
+func (c *Config) IntOnDutyRole() (r int64) {
+	r, _ = strconv.ParseInt(c.OnDutyRole, 10, 64)
+	return
+}
+
+func (c *Config) IntOnDutyChannelOne() (r int64) {
+	r, _ = strconv.ParseInt(c.OnDutyChannelOne, 10, 64)
+	return
+}
+func (c *Config) IntOnDutyChannelTwo() (r int64) {
+	r, _ = strconv.ParseInt(c.OnDutyChannelTwo, 10, 64)
 	return
 }
 
@@ -288,4 +309,20 @@ type MuteModel struct {
 
 func (m *MuteModel) TableName() string {
 	return "muted_users"
+}
+
+func (o OnDuty) TableName() string {
+	return "on_duty"
+}
+
+type OnDuty struct {
+	UserID  uint64 `gorm:"primary_key"`
+	GuildID int64  `gorm:"index"`
+
+	OnDuty         bool
+	OnDutyDuration time.Duration
+	OnDutySetAt    time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
