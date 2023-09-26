@@ -32,8 +32,8 @@ func onDutyTracker() {
 }
 
 type OnDuty struct {
-	UserID  uint64 `gorm:"primary_key"`
-	GuildID int64  `gorm:"index"`
+	UserID  uint64 `gorm:"primary_key" json:"user_id"`
+	GuildID int64  `gorm:"index" json:"guild_id"`
 
 	OnDuty         bool
 	OnDutyDuration time.Duration
@@ -90,8 +90,8 @@ func updateOnDutyChannelDescriptions() {
 			}
 
 			if !onDuty.OnDuty && common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
-				err = common.GORM.Table("on_duty").Update("on_duty", true).Error
-				err = common.GORM.Table("on_duty").Update("on_duty_set_at", time.Now()).Error
+				err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", true).Error
+				err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty_set_at", time.Now()).Error
 				onDuty.OnDuty = true
 
 				if err != nil {
@@ -102,11 +102,11 @@ func updateOnDutyChannelDescriptions() {
 
 			if onDuty.OnDuty {
 				if !common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
-					err = common.GORM.Table("on_duty").Update("on_duty", false).Error
+					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
 					continue
 				} else if time.Since(onDuty.OnDutySetAt) > onDuty.OnDutyDuration {
 					err = common.BotSession.GuildMemberRoleRemove(guild.ID, member.User.ID, OnDutyRole)
-					err = common.GORM.Table("on_duty").Update("on_duty", false).Error
+					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
 					if err != nil {
 						logger.Error(err)
 						return

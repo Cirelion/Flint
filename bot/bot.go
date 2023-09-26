@@ -213,6 +213,7 @@ func botReady() {
 
 	go runUpdateMetrics()
 	go onDutyTracker()
+	go screwTracker()
 	go loopCheckAdmins()
 
 	watchMemusage()

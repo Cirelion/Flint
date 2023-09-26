@@ -316,8 +316,8 @@ func (o OnDuty) TableName() string {
 }
 
 type OnDuty struct {
-	UserID  uint64 `gorm:"primary_key"`
-	GuildID int64  `gorm:"index"`
+	UserID  uint64 `gorm:"primary_key" json:"user_id"`
+	GuildID int64  `gorm:"index" json:"guild_id"`
 
 	OnDuty         bool
 	OnDutyDuration time.Duration

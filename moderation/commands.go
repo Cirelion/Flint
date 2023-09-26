@@ -1932,14 +1932,22 @@ var ModerationCommands = []*commands.YAGCommand{
 			{Name: "Duration", Type: &commands.DurationArg{}},
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			guildID := parsed.GuildData.GS.ID
+			config, err := GetConfig(guildID)
 			duration := parsed.Args[0].Value.(time.Duration)
 			onDuty := &OnDuty{UserID: uint64(parsed.Author.ID)}
-			err := common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
+
+			err = common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
 			if err != nil {
 				return nil, err
 			}
 
-			err = common.GORM.Model(onDuty).Update("OnDutyDuration", duration).Error
+			onDuty.OnDuty = true
+			onDuty.OnDutyDuration = duration
+			onDuty.OnDutySetAt = time.Now()
+
+			err = common.GORM.Model(onDuty).Update(&onDuty).Error
+			err = common.BotSession.GuildMemberRoleAdd(parsed.GuildData.GS.ID, parsed.Author.ID, config.IntOnDutyRole())
 			if err != nil {
 				return nil, err
 			}
