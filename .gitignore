@@ -12,7 +12,8 @@ cmd/yagpdb/soundboard
 cmd/yagpdb/shutdown_logs
 cmd/yagpdb/safebrowsing_db
 cmd/yagpdb/static/video/*
-
+cmd/yagpdb/*.log
+cmd/yagpdb/nohup.out
 cmd/capturepanics/capturepanics
 cmd/shardorchestrator/shardorchestrator
 
