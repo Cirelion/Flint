@@ -107,7 +107,7 @@ func giveScrews(data *dcmd.Data) (interface{}, error) {
 	}
 
 	common.GORM.Model(&givingPlayer).Updates(map[string]interface{}{"screws_given": givingPlayer.ScrewsGiven + screws, "screw_count": givingPlayer.ScrewCount - screws})
-	common.GORM.Model(&receivingPlayer).Updates(map[string]interface{}{"screws_received": givingPlayer.ScrewsReceived + screws, "screw_count": givingPlayer.ScrewCount + screws})
+	common.GORM.Model(&receivingPlayer).Updates(map[string]interface{}{"screws_received": receivingPlayer.ScrewsReceived + screws, "screw_count": receivingPlayer.ScrewCount + screws})
 
 	return fmt.Sprintf("%s gave %d <:tempscrewplschangelater:1156155400509464606> to %s!", data.Author.Mention(), screws, user.Mention()), nil
 }
