@@ -65,7 +65,8 @@ type Config struct {
 	IgnoreChannels   pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 	IgnoreCategories pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
-	//Heart board
+	//Star/Heart board
+	StarBoardChannel  int64         `valid:"channel,true"`
 	HeartBoardChannel int64         `valid:"channel,true"`
 	ShowcaseChannels  pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 

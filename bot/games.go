@@ -6,7 +6,7 @@ import (
 )
 
 func screwTracker() {
-	ticker := time.NewTicker(time.Hour * 24)
+	ticker := time.NewTicker(time.Hour * 2)
 	for {
 		<-ticker.C
 		resetScrewCount()
@@ -22,8 +22,9 @@ type Player struct {
 	ScrewsGiven    int64
 	ScrewsReceived int64
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	LastScrewCheck time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (o Player) TableName() string {
@@ -45,13 +46,17 @@ func resetScrewCount() {
 			return
 		}
 
-		if player.ScrewCount < 50 {
-			err = common.GORM.Table("players").Where("user_id = ?", player.UserID).Update("screw_count", 50).Error
-			if err != nil {
-				logger.Error(err)
-				return
+		if time.Since(player.LastScrewCheck) > time.Hour*12 {
+			err = common.GORM.Table("players").Where("user_id = ?", player.UserID).Update("last_screw_check", time.Now()).Error
+
+			if player.ScrewCount < 50 {
+				err = common.GORM.Table("players").Where("user_id = ?", player.UserID).Update("screw_count", 50).Error
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+				err = SendDM(int64(player.UserID), "Your screws have been reset to 50 again! Have fun betting!")
 			}
-			err = SendDM(int64(player.UserID), "Your screws have been reset to 50 again! Have fun betting!")
 		}
 	}
 

@@ -546,7 +546,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
 </div>
 <hr />
 
-<p>Heartboard configuration</p>
+<p>Star/Heartboard configuration</p>
 <div class="row">
     <div class="col-sm-6 col-md-3">
         <div class="form-group" id="heart-board-channel">
@@ -559,6 +559,14 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
             <label>Showcase channels</label><br>
             <select class="multiselect" name="ShowcaseChannels" data-plugin-multiselect multiple="multiple">
                 {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.ShowcaseChannels}}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="star-board-channel">
+            <label>Starboard channel</label><br>
+            <select class="multiselect" name="StarBoardChannel" data-plugin-multiselect>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.StarBoardChannel true "None"}}
             </select>
         </div>
     </div>

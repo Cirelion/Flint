@@ -13,8 +13,9 @@ type Player struct {
 	ScrewsGiven    int64 `json:"screws_given"`
 	ScrewsReceived int64 `json:"screws_received"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	LastScrewCheck time.Time `json:"last_screw_check"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (o Player) TableName() string {

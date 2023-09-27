@@ -63,12 +63,10 @@ func getScrews(data *dcmd.Data) (interface{}, error) {
 	} else {
 		player.UserID = data.Author.ID
 	}
-
 	common.GORM.Model(&player).First(&player)
 
 	if !player.Initialized {
 		initPlayer(player)
-
 	}
 
 	return fmt.Sprintf("%s has %d <:tempscrewplschangelater:1156155400509464606> in total!", mention, player.ScrewCount), nil
