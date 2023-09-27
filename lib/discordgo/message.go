@@ -350,6 +350,7 @@ type MessageEmbed struct {
 	Color       int                    `json:"color,omitempty"`
 	Footer      *MessageEmbedFooter    `json:"footer,omitempty"`
 	Image       *MessageEmbedImage     `json:"image,omitempty"`
+	Files       []*File                `json:"-"`
 	Thumbnail   *MessageEmbedThumbnail `json:"thumbnail,omitempty"`
 	Video       *MessageEmbedVideo     `json:"video,omitempty"`
 	Provider    *MessageEmbedProvider  `json:"provider,omitempty"`

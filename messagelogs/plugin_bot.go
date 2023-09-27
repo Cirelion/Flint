@@ -8,6 +8,12 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
 	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
 	"github.com/botlabs-gg/yagpdb/v2/moderation"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -60,6 +66,7 @@ func HandleMsgCreate(evt *eventsystem.EventData) (retry bool, err error) {
 			attachments = append(attachments, Attachment{
 				ID:        attachment.ID,
 				MessageID: msg.ID,
+				Filename:  attachment.Filename,
 				Url:       attachment.URL,
 				ProxyUrl:  attachment.ProxyURL,
 			})
@@ -193,15 +200,34 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 	if err != nil {
 		return false, err
 	}
+	messageSend := &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}}
+	var fileName string
+	if len(message.Attachments) == 1 {
+		fileName = downloadFile(message.Attachments[0].Url)
+		file, fileErr := os.Open(fileName)
+		if fileErr != nil {
+			return false, fileErr
+		}
 
-	_, err = common.BotSession.ChannelMessageSendEmbed(deleteLogChannelID, embed)
+		messageSend.Files = []*discordgo.File{{Name: fileName, Reader: file}}
+	}
+
+	_, err = common.BotSession.ChannelMessageSendComplex(deleteLogChannelID, messageSend)
+	os.Remove(fileName)
 	if err != nil {
 		return false, err
 	}
 
 	if len(message.Attachments) != 1 {
 		for _, attachment := range message.Attachments {
-			_, err = common.BotSession.ChannelMessageSend(deleteLogChannelID, attachment.Url)
+			fileName = downloadFile(attachment.Url)
+			file, fileErr := os.Open(fileName)
+			if fileErr != nil {
+				return false, fileErr
+			}
+
+			_, err = common.BotSession.ChannelMessageSendComplex(deleteLogChannelID, &discordgo.MessageSend{Files: []*discordgo.File{{Name: fileName, Reader: file}}})
+			os.Remove(fileName)
 		}
 	}
 
@@ -249,8 +275,7 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 
 	if len(message.Attachments) == 1 {
 		embed.Image = &discordgo.MessageEmbedImage{
-			URL:      message.Attachments[0].Url,
-			ProxyURL: message.Attachments[0].ProxyUrl,
+			URL: fmt.Sprintf("attachment://%s", message.Attachments[0].Filename),
 		}
 	} else if message.StickerID != 0 {
 		if message.StickerFormatType == discordgo.StickerLOTTIE {
@@ -271,4 +296,40 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 	}
 
 	return embed, nil
+}
+
+func downloadFile(filePath string) string {
+	fileURL, err := url.Parse(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	path := fileURL.Path
+	segments := strings.Split(path, "/")
+	fileName := segments[len(segments)-1]
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			r.URL.Opaque = r.URL.Path
+			return nil
+		},
+	}
+
+	resp, err := client.Get(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	return file.Name()
 }
