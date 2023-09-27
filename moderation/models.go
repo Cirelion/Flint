@@ -66,9 +66,11 @@ type Config struct {
 	IgnoreCategories pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
 	//Star/Heart board
-	StarBoardChannel  int64         `valid:"channel,true"`
-	HeartBoardChannel int64         `valid:"channel,true"`
-	ShowcaseChannels  pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
+	StarBoardChannel    int64         `valid:"channel,true"`
+	StarBoardThreshold  int64         `gorm:"default:5" valid:"1,100"`
+	HeartBoardChannel   int64         `valid:"channel,true"`
+	HeartBoardThreshold int64         `gorm:"default:5" valid:"1,100"`
+	ShowcaseChannels    pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
 	//On Duty
 	OnDutyRole                  string `valid:"role,true"`

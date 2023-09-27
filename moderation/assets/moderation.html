@@ -555,6 +555,11 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.HeartBoardChannel true "None"}}
             </select>
         </div>
+        <div class="form-group">
+            <label>Heart board reaction threshold</label>
+            <input type="number" min="1" max="100" name="HeartBoardThreshold" class="form-control"
+                   value="{{.ModConfig.HeartBoardThreshold}}">
+        </div>
         <div class="form-group" id="showcase-channels">
             <label>Showcase channels</label><br>
             <select class="multiselect" name="ShowcaseChannels" data-plugin-multiselect multiple="multiple">
@@ -568,6 +573,11 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
             <select class="multiselect" name="StarBoardChannel" data-plugin-multiselect>
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.StarBoardChannel true "None"}}
             </select>
+        </div>
+        <div class="form-group">
+            <label>Starboard reaction threshold</label>
+            <input type="number" min="1" max="100" name="StarBoardThreshold" class="form-control"
+                   value="{{.ModConfig.StarBoardThreshold}}">
         </div>
     </div>
 </div>

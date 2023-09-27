@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
 
 var (
@@ -33,7 +34,7 @@ func (p *Plugin) PluginInfo() *common.PluginInfo {
 func RegisterPlugin() {
 	common.RegisterPlugin(&Plugin{})
 
-	common.GORM.AutoMigrate(&Showcase{})
+	common.GORM.AutoMigrate(&Showcase{}, &MemberQuote{})
 }
 
 var _ bot.BotInitHandler = (*Plugin)(nil)
@@ -69,23 +70,215 @@ func handleReaction(evt *eventsystem.EventData) {
 		return
 	}
 
-	if !isValidChannel(channel, config) {
-		logger.Println("Invalid channel for heart board")
+	if isValidChannel(channel, config) {
+		handleHeartBoard(config, channel, reaction)
+	} else if reaction.Emoji.Name == "⭐" || reaction.Emoji.Name == "❌" {
+		handleStarBoard(config, reaction)
+	}
+}
+
+func initMemberQuote(guildID int64, message *discordgo.Message) *MemberQuote {
+	quoteTimeStamp, err := message.Timestamp.Parse()
+	if err != nil {
+		logger.Error(err)
+	}
+
+	memberQuote := &MemberQuote{
+		MessageID:      message.ID,
+		ChannelID:      message.ChannelID,
+		GuildID:        guildID,
+		AuthorID:       message.Author.ID,
+		QuoteTimestamp: quoteTimeStamp,
+		Approval:       handleCountApproval(message.Reactions, "⭐"),
+	}
+
+	if message.Content != "" {
+		memberQuote.Content = message.Content
+	}
+
+	if len(message.Attachments) > 0 {
+		memberQuote.ImageUrl = message.Attachments[0].URL
+	}
+
+	err = common.GORM.Model(memberQuote).Save(memberQuote).Error
+	if err != nil {
+		logger.Error(err)
+	}
+
+	return memberQuote
+}
+
+func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReaction) {
+	starboardEmoji := "⭐"
+	message, err := common.BotSession.ChannelMessage(reaction.ChannelID, reaction.MessageID)
+	member, err := bot.GetMember(reaction.GuildID, reaction.UserID)
+
+	if err != nil {
+		logger.Error(err)
 		return
 	}
 
+	if !message.Author.Bot && (message.Content != "" || len(message.Attachments) > 0) {
+		memberQuote := &MemberQuote{
+			MessageID: reaction.MessageID,
+		}
+
+		err = common.GORM.Model(memberQuote).Find(memberQuote).Error
+		if err != nil {
+			memberQuote = initMemberQuote(reaction.GuildID, message)
+		}
+
+		memberQuote.Approval = handleCountApproval(message.Reactions, "⭐")
+
+		if memberQuote.StarBoardMessageID > 1 {
+			starboardMessage, starboardMessageErr := common.BotSession.ChannelMessage(config.StarBoardChannel, memberQuote.StarBoardMessageID)
+			if starboardMessageErr != nil {
+				logger.Error(starboardMessageErr)
+				return
+			}
+
+			reactedStars, reactionsErr := common.BotSession.MessageReactions(starboardMessage.ChannelID, starboardMessage.ID, "⭐", 0, 0, 0)
+			reactedXs, reactionsErr := common.BotSession.MessageReactions(starboardMessage.ChannelID, starboardMessage.ID, "❌", 0, 0, 0)
+			if reactionsErr != nil {
+				logger.Error(reactionsErr)
+				return
+			}
+
+			hasUserReacted := false
+			for _, user := range reactedStars {
+				if user.ID == reaction.UserID {
+					hasUserReacted = true
+				}
+			}
+
+			for _, user := range reactedXs {
+				if user.ID == reaction.UserID {
+					hasUserReacted = true
+				}
+			}
+
+			if hasUserReacted {
+				time.Sleep(time.Second * 2)
+				err = common.BotSession.MessageReactionRemove(message.ChannelID, message.ID, reaction.Emoji.Name, reaction.UserID)
+				if err != nil {
+					logger.Error(err)
+				}
+				return
+			}
+
+			memberQuote.Approval = handleCountApproval(message.Reactions, "⭐") + handleCountApproval(starboardMessage.Reactions, "⭐")
+		}
+
+		if memberQuote.Approval >= config.StarBoardThreshold {
+			if memberQuote.StarBoardMessageID > 1 {
+				if memberQuote.Approval >= config.StarBoardThreshold*2 {
+					starboardEmoji = "🌟"
+				}
+
+				_, err = common.BotSession.ChannelMessageEditEmbed(config.StarBoardChannel, memberQuote.StarBoardMessageID, generateMemberQuoteEmbed(memberQuote, starboardEmoji))
+				if err != nil {
+					logger.Error(err)
+					return
+				}
+			} else {
+				embedMessage, embedMessageErr := common.BotSession.ChannelMessageSendEmbed(config.StarBoardChannel, generateMemberQuoteEmbed(memberQuote, starboardEmoji))
+				if embedMessageErr != nil {
+					logger.Error(embedMessageErr)
+					return
+				}
+
+				err = common.BotSession.MessageReactionAdd(embedMessage.ChannelID, embedMessage.ID, "⭐")
+				if err != nil {
+					logger.Error(err)
+				}
+
+				err = common.BotSession.MessageReactionAdd(embedMessage.ChannelID, embedMessage.ID, "❌")
+				if err != nil {
+					logger.Error(err)
+				}
+
+				memberQuote.StarBoardMessageID = embedMessage.ID
+			}
+		} else if memberQuote.StarBoardMessageID > 1 {
+			err = common.BotSession.ChannelMessageDelete(config.StarBoardChannel, memberQuote.StarBoardMessageID)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+			memberQuote.StarBoardMessageID = 1
+		}
+
+		err = common.GORM.Model(memberQuote).Update([]interface{}{memberQuote}).Error
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+	} else if message.ChannelID == config.StarBoardChannel && !member.User.Bot {
+		memberQuote := &MemberQuote{}
+		err = common.GORM.Model(memberQuote).Where("star_board_message_id = ?", reaction.MessageID).Find(memberQuote).Error
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		msg, msgErr := common.BotSession.ChannelMessage(memberQuote.ChannelID, memberQuote.MessageID)
+		if msgErr != nil {
+			logger.Error(msgErr)
+			return
+		}
+
+		reactedStars, reactionsErr := common.BotSession.MessageReactions(memberQuote.ChannelID, memberQuote.MessageID, "⭐", 0, 0, 0)
+		reactedXs, reactionsErr := common.BotSession.MessageReactions(memberQuote.ChannelID, memberQuote.MessageID, "❌", 0, 0, 0)
+		if reactionsErr != nil {
+			logger.Error(reactionsErr)
+			return
+		}
+
+		hasUserReacted := false
+		for _, user := range reactedStars {
+			if user.ID == reaction.UserID {
+				hasUserReacted = true
+			}
+		}
+
+		for _, user := range reactedXs {
+			if user.ID == reaction.UserID {
+				hasUserReacted = true
+			}
+		}
+
+		if hasUserReacted {
+			time.Sleep(time.Second * 2)
+			err = common.BotSession.MessageReactionRemove(message.ChannelID, memberQuote.StarBoardMessageID, reaction.Emoji.Name, reaction.UserID)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+		}
+
+		memberQuote.Approval = handleCountApproval(msg.Reactions, "⭐") + handleCountApproval(message.Reactions, "⭐")
+		_, err = common.BotSession.ChannelMessageEditEmbed(config.StarBoardChannel, memberQuote.StarBoardMessageID, generateMemberQuoteEmbed(memberQuote, starboardEmoji))
+		err = common.GORM.Model(memberQuote).Update([]interface{}{memberQuote}).Error
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+	}
+}
+
+func handleHeartBoard(config *moderation.Config, channel *dstate.ChannelState, reaction *discordgo.MessageReaction) {
 	showcase := &Showcase{
 		MessageID: reaction.MessageID,
 	}
 
 	message, _ := common.BotSession.ChannelMessage(channel.ID, showcase.MessageID)
-	err = common.GORM.Model(showcase).Find(showcase).Error
+	err := common.GORM.Model(showcase).Find(showcase).Error
 	showcase.Title = channel.Name
 	showcase.Content = message.Content
 
 	if err != nil {
 		showcase.AuthorID = message.Author.ID
-		showcase.GuildID = evt.GS.ID
+		showcase.GuildID = reaction.GuildID
 		re, _ := regexp.Compile(urlRegex)
 		if re.MatchString(message.Content) {
 			showcase.WebsiteUrl = re.FindString(message.Content)
@@ -102,7 +295,7 @@ func handleReaction(evt *eventsystem.EventData) {
 	}
 
 	if len(message.Reactions) > 0 {
-		showcase.Approval = handleCountApproval(message.Reactions)
+		showcase.Approval = handleCountApproval(message.Reactions, "unhingedpinkheart")
 	} else {
 		showcase.Approval = 0
 	}
@@ -112,8 +305,8 @@ func handleReaction(evt *eventsystem.EventData) {
 		return
 	}
 
-	if showcase.Approval > 4 && showcase.ImageUrl != "" {
-		embed := generateEmbed(showcase)
+	if showcase.Approval >= config.HeartBoardThreshold && showcase.ImageUrl != "" {
+		embed := generateShowcaseEmbed(showcase)
 		if showcase.HeartBoardMessageID == 1 {
 			msg, msgErr := common.BotSession.ChannelMessageSendEmbed(config.HeartBoardChannel, embed)
 
@@ -132,8 +325,8 @@ func handleReaction(evt *eventsystem.EventData) {
 			}
 		}
 	} else if showcase.HeartBoardMessageID != 1 {
-		showcase.HeartBoardMessageID = 1
 		msgErr := common.BotSession.ChannelMessageDelete(config.HeartBoardChannel, showcase.HeartBoardMessageID)
+		showcase.HeartBoardMessageID = 1
 		if msgErr != nil {
 			logger.Error(msgErr)
 		}
@@ -145,7 +338,7 @@ func handleReaction(evt *eventsystem.EventData) {
 	}
 }
 
-func generateEmbed(showcase *Showcase) *discordgo.MessageEmbed {
+func generateShowcaseEmbed(showcase *Showcase) *discordgo.MessageEmbed {
 	member, err := bot.GetMember(showcase.GuildID, showcase.AuthorID)
 	if err != nil {
 		logger.Error("memberErr: ", showcase.GuildID, showcase.AuthorID, err)
@@ -172,11 +365,45 @@ func generateEmbed(showcase *Showcase) *discordgo.MessageEmbed {
 	return embed
 }
 
-func handleCountApproval(reactions []*discordgo.MessageReactions) int {
+func generateMemberQuoteEmbed(memberQuote *MemberQuote, quoteEmoji string) *discordgo.MessageEmbed {
+	member, err := bot.GetMember(memberQuote.GuildID, memberQuote.AuthorID)
+	if err != nil {
+		logger.Error("memberErr: ", memberQuote.GuildID, memberQuote.AuthorID, err)
+		return nil
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Color: rand.Intn(16777215),
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL: memberQuote.ImageUrl,
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Author", Value: member.User.Mention(), Inline: true},
+			{Name: "Channel", Value: fmt.Sprintf("<#%d>", memberQuote.ChannelID), Inline: true},
+		},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("%s %d | %d", quoteEmoji, memberQuote.Approval, memberQuote.MessageID),
+		},
+		Timestamp: memberQuote.QuoteTimestamp.Format(time.RFC3339),
+	}
+
+	if memberQuote.Content != "" {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Content", Value: memberQuote.Content})
+	}
+
+	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Message", Value: fmt.Sprintf("[Jump to](%s)", fmt.Sprintf("https://discord.com/channels/%d/%d/%d", memberQuote.GuildID, memberQuote.ChannelID, memberQuote.MessageID))})
+
+	return embed
+}
+
+func handleCountApproval(reactions []*discordgo.MessageReactions, EmojiName string) int64 {
 	count := 0
 
 	for _, reaction := range reactions {
-		if reaction.Emoji.Name == "unhingedpinkheart" {
+		if reaction.Emoji.Name == EmojiName {
 			count += reaction.Count
 		}
 
@@ -185,7 +412,7 @@ func handleCountApproval(reactions []*discordgo.MessageReactions) int {
 		}
 	}
 
-	return count
+	return int64(count)
 }
 
 func isValidChannel(channel *dstate.ChannelState, config *moderation.Config) bool {

@@ -55,7 +55,7 @@ func resetScrewCount() {
 					logger.Error(err)
 					return
 				}
-				err = SendDM(int64(player.UserID), "Your screws have been reset to 50 again! Have fun betting!")
+				err = SendDM(int64(player.UserID), "Your screws topped up again! Have fun betting!")
 			}
 		}
 	}
