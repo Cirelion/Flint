@@ -8,6 +8,7 @@ import (
 	"github.com/botlabs-gg/yagpdb/v2/common/prom"
 	"github.com/botlabs-gg/yagpdb/v2/common/run"
 	"github.com/botlabs-gg/yagpdb/v2/games"
+	"github.com/botlabs-gg/yagpdb/v2/giveaways"
 	"github.com/botlabs-gg/yagpdb/v2/heartboard"
 	"github.com/botlabs-gg/yagpdb/v2/lib/confusables"
 	"github.com/botlabs-gg/yagpdb/v2/messagelogs"
@@ -46,6 +47,7 @@ func main() {
 
 	//BotSession.LogLevel = discordgo.LogInformational
 	polls.RegisterPlugin()
+	giveaways.RegisterPlugin()
 	games.RegisterPlugin()
 	heartboard.RegisterPlugin()
 	paginatedmessages.RegisterPlugin()

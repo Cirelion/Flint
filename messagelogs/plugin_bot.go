@@ -274,8 +274,15 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 	}
 
 	if len(message.Attachments) == 1 {
-		embed.Image = &discordgo.MessageEmbedImage{
-			URL: fmt.Sprintf("attachment://%s", message.Attachments[0].Filename),
+		fileName := message.Attachments[0].Filename
+		if strings.Contains(fileName, "mp4") {
+			embed.Video = &discordgo.MessageEmbedVideo{
+				URL: fmt.Sprintf("attachment://%s", message.Attachments[0].Filename),
+			}
+		} else {
+			embed.Image = &discordgo.MessageEmbedImage{
+				URL: fmt.Sprintf("attachment://%s", message.Attachments[0].Filename),
+			}
 		}
 	} else if message.StickerID != 0 {
 		if message.StickerFormatType == discordgo.StickerLOTTIE {
