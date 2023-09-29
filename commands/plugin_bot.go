@@ -284,6 +284,14 @@ func FilterResp(in interface{}, guildID int64) interface{} {
 func AddRootCommands(p common.Plugin, cmds ...*YAGCommand) {
 	for _, v := range cmds {
 		v.Plugin = p
+
+		if v.ApplicationCommandEnabled && v.ApplicationCommandType != 0 {
+			t := v.GetTrigger()
+			t.SetAppCommandNotSlash(true)
+			CommandSystem.Root.AddCommand(v, t)
+			continue
+		}
+
 		CommandSystem.Root.AddCommand(v, v.GetTrigger())
 	}
 }

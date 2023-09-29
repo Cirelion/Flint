@@ -29,8 +29,8 @@ var Command = &commands.YAGCommand{
 	Arguments: []*dcmd.ArgDef{
 		{Name: "Where", Type: dcmd.String},
 	},
-	DefaultEnabled:      true,
-	SlashCommandEnabled: true,
+	DefaultEnabled:            true,
+	ApplicationCommandEnabled: true,
 	RunFunc: func(data *dcmd.Data) (interface{}, error) {
 		where := data.Args[0].Str()
 

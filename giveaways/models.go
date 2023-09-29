@@ -14,7 +14,6 @@ type Giveaway struct {
 	Active       *bool `sql:"DEFAULT:true"`
 	Prize        string
 	MaxWinners   int64
-	CoHostID     int64
 	Participants pq.Int64Array `gorm:"type:bigint[]"`
 	Winners      pq.Int64Array `gorm:"type:bigint[]"`
 

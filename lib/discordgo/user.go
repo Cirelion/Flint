@@ -84,14 +84,14 @@ func (u *User) AvatarURL(size string) string {
 		//
 		// "For users on the new username system, `index` will be `(user_id >> 22) % 6`.
 		// For users on the legacy username system, `index` will be `discriminator % 5`."
-		var index int
+		var index int64
 		if u.Discriminator == "0" {
-			index = int((u.ID >> 22) % 6)
+			index = (u.ID >> 22) % 6
 		} else {
 			discrim, _ := strconv.Atoi(u.Discriminator)
-			index = discrim % 5
+			index = int64(discrim % 5)
 		}
-		URL = EndpointDefaultUserAvatar(index)
+		URL = EndpointDefaultUserAvatar(int64(index))
 	} else if strings.HasPrefix(u.Avatar, "a_") {
 		URL = EndpointUserAvatarAnimated(u.ID, u.Avatar)
 	} else {

@@ -38,15 +38,14 @@ var (
 	hltbHostPath = "api/search"
 )
 
-//Command var needs a comment for lint :)
 var Command = &commands.YAGCommand{
-	CmdCategory:         commands.CategoryFun,
-	Name:                "HowLongToBeat",
-	Aliases:             []string{"hltb"},
-	RequiredArgs:        1,
-	Description:         "Game information based on query from howlongtobeat.com.\nResults are sorted by popularity, it's their default. Without -p returns the first result.\nSwitch -p gives paginated output using the Jaro-Winkler similarity metric sorting max 20 results.",
-	DefaultEnabled:      true,
-	SlashCommandEnabled: true,
+	CmdCategory:               commands.CategoryFun,
+	Name:                      "HowLongToBeat",
+	Aliases:                   []string{"hltb"},
+	RequiredArgs:              1,
+	Description:               "Game information based on query from howlongtobeat.com.\nResults are sorted by popularity, it's their default. Without -p returns the first result.\nSwitch -p gives paginated output using the Jaro-Winkler similarity metric sorting max 20 results.",
+	DefaultEnabled:            true,
+	ApplicationCommandEnabled: true,
 	Arguments: []*dcmd.ArgDef{
 		{Name: "Game-Title", Type: dcmd.String},
 	},

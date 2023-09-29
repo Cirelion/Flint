@@ -19,7 +19,6 @@ import (
 	_ "image/jpeg" // For JPEG decoding
 	_ "image/png"  // For PNG decoding
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -51,7 +50,7 @@ func (s *Session) Request(method, urlStr string, data interface{}, headers map[s
 }
 
 // RequestWithBucketID makes a (GET/POST/...) Requests to Discord REST API with JSON data.
-func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, headers map[string]string, bucketID string) (response []byte, err error) {
+func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, extraHeaders map[string]string, bucketID string, options ...RequestOption) (response []byte, err error) {
 	var body []byte
 	if data != nil {
 		body, err = json.Marshal(data)
@@ -60,18 +59,18 @@ func (s *Session) RequestWithBucketID(method, urlStr string, data interface{}, h
 		}
 	}
 
-	return s.request(method, urlStr, "application/json", body, headers, bucketID)
+	return s.request(method, urlStr, "application/json", body, extraHeaders, bucketID, options...)
 }
 
 // request makes a (GET/POST/...) Requests to Discord REST API.
 // Sequence is the sequence number, if it fails with a 502 it will
 // retry with sequence+1 until it either succeeds or sequence >= session.MaxRestRetries
-func (s *Session) request(method, urlStr, contentType string, b []byte, headers map[string]string, bucketID string) (response []byte, err error) {
+func (s *Session) request(method, urlStr, contentType string, b []byte, extraHeaders map[string]string, bucketID string, options ...RequestOption) (response []byte, err error) {
 	if bucketID == "" {
 		bucketID = strings.SplitN(urlStr, "?", 2)[0]
 	}
 
-	return s.RequestWithBucket(method, urlStr, contentType, b, headers, s.Ratelimiter.GetBucket(bucketID))
+	return s.RequestWithBucket(method, urlStr, contentType, b, extraHeaders, s.Ratelimiter.GetBucket(bucketID), options...)
 }
 
 type ReaderWithMockClose struct {
@@ -83,12 +82,12 @@ func (rwmc *ReaderWithMockClose) Close() error {
 }
 
 // RequestWithLockedBucket makes a request using a bucket that's already been locked
-func (s *Session) RequestWithBucket(method, urlStr, contentType string, b []byte, headers map[string]string, bucket *Bucket) (response []byte, err error) {
+func (s *Session) RequestWithBucket(method, urlStr, contentType string, b []byte, extraHeaders map[string]string, bucket *Bucket, options ...RequestOption) (response []byte, err error) {
 
 	for i := 0; i < s.MaxRestRetries; i++ {
 		var retry bool
 		var ratelimited bool
-		response, retry, ratelimited, err = s.doRequest(method, urlStr, contentType, b, headers, bucket)
+		response, retry, ratelimited, err = s.doRequest(method, urlStr, contentType, b, extraHeaders, bucket, options...)
 		if !retry {
 			break
 		}
@@ -114,14 +113,34 @@ const (
 	CtxKeyRatelimitBucket CtxKey = iota
 )
 
+// RequestConfig is an HTTP request configuration.
+type RequestConfig struct {
+	Request                *http.Request
+	ShouldRetryOnRateLimit bool
+	MaxRestRetries         int
+	Client                 *http.Client
+}
+
+// newRequestConfig returns a new HTTP request configuration based on parameters in Session.
+func newRequestConfig(s *Session, req *http.Request) *RequestConfig {
+	return &RequestConfig{
+		ShouldRetryOnRateLimit: s.ShouldRetryOnRateLimit,
+		MaxRestRetries:         s.MaxRestRetries,
+		Client:                 s.Client,
+		Request:                req,
+	}
+}
+
+type RequestOption func(cfg *RequestConfig)
+
 // doRequest makes a request using a bucket
-func (s *Session) doRequest(method, urlStr, contentType string, b []byte, headers map[string]string, bucket *Bucket) (response []byte, retry bool, ratelimitRetry bool, err error) {
+func (s *Session) doRequest(method, urlStr, contentType string, b []byte, extraHeaders map[string]string, bucket *Bucket, options ...RequestOption) (response []byte, retry bool, ratelimitRetry bool, err error) {
 
 	if atomic.LoadInt32(s.tokenInvalid) != 0 {
 		return nil, false, false, ErrTokenInvalid
 	}
 
-	req, resp, err := s.innerDoRequest(method, urlStr, contentType, b, headers, bucket)
+	req, resp, err := s.innerDoRequest(method, urlStr, contentType, b, extraHeaders, bucket, options...)
 	if err != nil {
 		return nil, true, false, err
 	}
@@ -133,7 +152,7 @@ func (s *Session) doRequest(method, urlStr, contentType string, b []byte, header
 		}
 	}()
 
-	response, err = ioutil.ReadAll(resp.Body)
+	response, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, true, false, err
 	}
@@ -195,8 +214,7 @@ func (s *Session) doRequest(method, urlStr, contentType string, b []byte, header
 
 	return
 }
-
-func (s *Session) innerDoRequest(method, urlStr, contentType string, b []byte, headers map[string]string, bucket *Bucket) (*http.Request, *http.Response, error) {
+func (s *Session) innerDoRequest(method, urlStr, contentType string, b []byte, extraHeaders map[string]string, bucket *Bucket, options ...RequestOption) (*http.Request, *http.Response, error) {
 	bucketLockID := s.Ratelimiter.LockBucketObject(bucket)
 	defer func() {
 		err := bucket.Release(nil, bucketLockID)
@@ -220,7 +238,7 @@ func (s *Session) innerDoRequest(method, urlStr, contentType string, b []byte, h
 	}
 
 	// we may need to send a request with extra headers
-	for k, v := range headers {
+	for k, v := range extraHeaders {
 		req.Header.Set(k, v)
 	}
 
@@ -238,6 +256,16 @@ func (s *Session) innerDoRequest(method, urlStr, contentType string, b []byte, h
 
 	// TODO: Make a configurable static variable.
 	req.Header.Set("User-Agent", fmt.Sprintf("DiscordBot (https://github.com/botlabs-gg/discordgo, v%s)", VERSION))
+
+	cfg := newRequestConfig(s, req)
+	for _, opt := range options {
+		opt(cfg)
+	}
+	req = cfg.Request
+
+	for header, value := range extraHeaders {
+		req.Header.Set(header, value)
+	}
 
 	// for things such as stats collecting in the roundtripper for example
 	ctx := context.WithValue(req.Context(), CtxKeyRatelimitBucket, bucket)
@@ -2750,5 +2778,24 @@ func (s *Session) EditFollowupMessage(applicationID int64, token string, message
 // DELETE /webhooks/{application.id}/{interaction.token}/messages/{message.id}
 func (s *Session) DeleteFollowupMessage(applicationID int64, token string, messageID int64) (err error) {
 	_, err = s.RequestWithBucketID("DELETE", EndpointInteractionFollowupMessage(applicationID, token, messageID), nil, nil, EndpointInteractionFollowupMessage(0, "", 0))
+	return
+}
+
+// ApplicationCommandBulkOverwrite Creates commands overwriting existing commands. Returns a list of commands.
+// appID    : The application ID.
+// commands : The commands to create.
+func (s *Session) ApplicationCommandBulkOverwrite(appID, guildID int64, commands []*ApplicationCommand, options ...RequestOption) (createdCommands []*ApplicationCommand, err error) {
+	endpoint := EndpointApplicationGlobalCommands(appID)
+	if guildID != 0 {
+		endpoint = EndpointApplicationGuildCommands(appID, guildID)
+	}
+
+	body, err := s.RequestWithBucketID("PUT", endpoint, commands, nil, endpoint, options...)
+	if err != nil {
+		return
+	}
+
+	err = unmarshal(body, &createdCommands)
+
 	return
 }

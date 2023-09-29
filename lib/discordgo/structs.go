@@ -41,6 +41,9 @@ type Session struct {
 	// Should the session reconnect the websocket on errors.
 	ShouldReconnectOnError bool
 
+	// Should the session retry requests when rate limited.
+	ShouldRetryOnRateLimit bool
+
 	// Should the session request compressed websocket data.
 	Compress bool
 
@@ -623,27 +626,16 @@ func (a *Activities) UnmarshalJSONArray(dec *gojay.Decoder) error {
 	return nil
 }
 
-// GameType is the type of "game" (see GameType* consts) in the Game struct
-type GameType int
-
-// Valid GameType values
-const (
-	GameTypeGame GameType = iota
-	GameTypeStreaming
-	GameTypeListening
-	GameTypeWatching
-)
-
 // A Game struct holds the name of the "playing .." game for a user
 type Game struct {
-	Name       string     `json:"name"`
-	Type       GameType   `json:"type"`
-	URL        string     `json:"url,omitempty"`
-	Details    string     `json:"details,omitempty"`
-	State      string     `json:"state,omitempty"`
-	TimeStamps TimeStamps `json:"timestamps,omitempty"`
-	Assets     Assets     `json:"assets,omitempty"`
-	Instance   int8       `json:"instance,omitempty"`
+	Name       string       `json:"name"`
+	Type       ActivityType `json:"type"`
+	URL        string       `json:"url,omitempty"`
+	Details    string       `json:"details,omitempty"`
+	State      string       `json:"state,omitempty"`
+	TimeStamps TimeStamps   `json:"timestamps,omitempty"`
+	Assets     Assets       `json:"assets,omitempty"`
+	Instance   int8         `json:"instance,omitempty"`
 }
 
 // implement gojay.UnmarshalerJSONObject
@@ -1550,3 +1542,17 @@ type AutoModerationAction struct {
 	Type     AutoModerationActionType      `json:"type"`
 	Metadata *AutoModerationActionMetadata `json:"metadata,omitempty"`
 }
+
+// ActivityType is the type of Activity (see ActivityType* consts) in the Activity struct
+// https://discord.com/developers/docs/topics/gateway#activity-object-activity-types
+type ActivityType int
+
+// Valid ActivityType values
+const (
+	ActivityTypeGame      ActivityType = 0
+	ActivityTypeStreaming ActivityType = 1
+	ActivityTypeListening ActivityType = 2
+	ActivityTypeWatching  ActivityType = 3
+	ActivityTypeCustom    ActivityType = 4
+	ActivityTypeCompeting ActivityType = 5
+)

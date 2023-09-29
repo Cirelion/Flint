@@ -797,7 +797,7 @@ func (g *GatewayConnection) Close() error {
 	return nil
 }
 
-func newUpdateStatusData(idle int, gameType GameType, game, url string) *UpdateStatusData {
+func newUpdateStatusData(idle int, gameType ActivityType, game, url string) *UpdateStatusData {
 	usd := &UpdateStatusData{
 		Status: "online",
 	}
@@ -822,7 +822,7 @@ func newUpdateStatusData(idle int, gameType GameType, game, url string) *UpdateS
 // If game!="" then set game.
 // if otherwise, set status to active, and no game.
 func (s *Session) UpdateStatus(idle int, game string) (err error) {
-	return s.UpdateStatusComplex(*newUpdateStatusData(idle, GameTypeGame, game, ""))
+	return s.UpdateStatusComplex(*newUpdateStatusData(idle, ActivityTypeGame, game, ""))
 }
 
 // UpdateStreamingStatus is used to update the user's streaming status.
@@ -831,18 +831,18 @@ func (s *Session) UpdateStatus(idle int, game string) (err error) {
 // If game!="" and url!="" then set the status type to streaming with the URL set.
 // if otherwise, set status to active, and no game.
 func (s *Session) UpdateStreamingStatus(idle int, game string, url string) (err error) {
-	gameType := GameTypeGame
+	activityType := ActivityTypeGame
 	if url != "" {
-		gameType = GameTypeStreaming
+		activityType = ActivityTypeStreaming
 	}
-	return s.UpdateStatusComplex(*newUpdateStatusData(idle, gameType, game, url))
+	return s.UpdateStatusComplex(*newUpdateStatusData(idle, activityType, game, url))
 }
 
 // UpdateListeningStatus is used to set the user to "Listening to..."
 // If game!="" then set to what user is listening to
 // Else, set user to active and no game.
 func (s *Session) UpdateListeningStatus(game string) (err error) {
-	return s.UpdateStatusComplex(*newUpdateStatusData(0, GameTypeListening, game, ""))
+	return s.UpdateStatusComplex(*newUpdateStatusData(0, ActivityTypeListening, game, ""))
 }
 
 func (s *Session) UpdateStatusComplex(usd UpdateStatusData) (err error) {

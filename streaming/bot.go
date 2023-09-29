@@ -285,7 +285,7 @@ func CheckPresenceSparse(client radix.Client, config *Config, p *discordgo.Prese
 
 func retrieveMainActivity(p *discordgo.Presence) *discordgo.Game {
 	for _, v := range p.Activities {
-		if v.Type == discordgo.GameTypeStreaming {
+		if v.Type == discordgo.ActivityTypeStreaming {
 			return v
 		}
 	}

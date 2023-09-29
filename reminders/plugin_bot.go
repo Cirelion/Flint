@@ -49,8 +49,8 @@ var cmds = []*commands.YAGCommand{
 		ArgSwitches: []*dcmd.ArgDef{
 			{Name: "channel", Type: dcmd.Channel},
 		},
-		SlashCommandEnabled: true,
-		DefaultEnabled:      true,
+		ApplicationCommandEnabled: true,
+		DefaultEnabled:            true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			currentReminders, _ := GetUserReminders(parsed.Author.ID)
 			if len(currentReminders) >= 25 {
@@ -94,12 +94,12 @@ var cmds = []*commands.YAGCommand{
 		},
 	},
 	{
-		CmdCategory:         commands.CategoryTool,
-		Name:                "Reminders",
-		Description:         "Lists your active reminders",
-		SlashCommandEnabled: true,
-		DefaultEnabled:      true,
-		IsResponseEphemeral: true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "Reminders",
+		Description:               "Lists your active reminders",
+		ApplicationCommandEnabled: true,
+		DefaultEnabled:            true,
+		IsResponseEphemeral:       true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			currentReminders, err := GetUserReminders(parsed.Author.ID)
 			if err != nil {
@@ -117,13 +117,13 @@ var cmds = []*commands.YAGCommand{
 		},
 	},
 	{
-		CmdCategory:         commands.CategoryTool,
-		Name:                "CReminders",
-		Aliases:             []string{"channelreminders"},
-		Description:         "Lists reminders in channel, only users with 'manage channel' permissions can use this.",
-		SlashCommandEnabled: true,
-		DefaultEnabled:      true,
-		IsResponseEphemeral: true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "CReminders",
+		Aliases:                   []string{"channelreminders"},
+		Description:               "Lists reminders in channel, only users with 'manage channel' permissions can use this.",
+		ApplicationCommandEnabled: true,
+		DefaultEnabled:            true,
+		IsResponseEphemeral:       true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			ok, err := bot.AdminOrPermMS(parsed.GuildData.GS.ID, parsed.ChannelID, parsed.GuildData.MS, discordgo.PermissionManageChannels)
 			if err != nil {
@@ -160,9 +160,9 @@ var cmds = []*commands.YAGCommand{
 		ArgSwitches: []*dcmd.ArgDef{
 			{Name: "a", Help: "All"},
 		},
-		SlashCommandEnabled: true,
-		DefaultEnabled:      true,
-		IsResponseEphemeral: true,
+		ApplicationCommandEnabled: true,
+		DefaultEnabled:            true,
+		IsResponseEphemeral:       true,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			var reminder Reminder
 

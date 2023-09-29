@@ -15,16 +15,16 @@ import (
 
 var (
 	StartGiveaway = &commands.YAGCommand{
-		CmdCategory:              commands.CategoryTool,
-		Name:                     "Giveaway",
-		Description:              "Starts a giveaway",
-		RequiredArgs:             2,
-		DefaultEnabled:           true,
-		SlashCommandEnabled:      true,
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:      true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "Giveaway",
+		Description:               "Starts a giveaway",
+		RequiredArgs:              2,
+		DefaultEnabled:            true,
+		ApplicationCommandEnabled: true,
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		IsResponseEphemeral:       true,
 		Arguments: []*dcmd.ArgDef{
 			{Name: "Prize", Help: "The prize of the giveaway", Type: dcmd.String},
 			{Name: "Duration", Help: "The duration of the giveaway", Type: &commands.DurationArg{}},
@@ -37,40 +37,40 @@ var (
 		RunFunc: startGiveaway,
 	}
 	EndGiveaway = &commands.YAGCommand{
-		CmdCategory:              commands.CategoryTool,
-		Name:                     "EndGiveaway",
-		DefaultEnabled:           true,
-		SlashCommandEnabled:      true,
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:      true,
-		ContextMenuMessage:       true,
-		RunFunc:                  endGiveaway,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "End Giveaway",
+		DefaultEnabled:            true,
+		ApplicationCommandEnabled: true,
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		IsResponseEphemeral:       true,
+		ApplicationCommandType:    3,
+		RunFunc:                   endGiveaway,
 	}
 	CancelGiveaway = &commands.YAGCommand{
-		CmdCategory:              commands.CategoryTool,
-		Name:                     "CancelGiveaway",
-		DefaultEnabled:           true,
-		SlashCommandEnabled:      true,
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:      true,
-		ContextMenuMessage:       true,
-		RunFunc:                  cancelGiveaway,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "Cancel Giveaway",
+		DefaultEnabled:            true,
+		ApplicationCommandEnabled: true,
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		IsResponseEphemeral:       true,
+		ApplicationCommandType:    3,
+		RunFunc:                   cancelGiveaway,
 	}
 	RerollGiveaway = &commands.YAGCommand{
-		CmdCategory:              commands.CategoryTool,
-		Name:                     "RerollGiveaway",
-		DefaultEnabled:           true,
-		SlashCommandEnabled:      true,
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
-		RequireBotPerms:          [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:      false,
-		ContextMenuMessage:       true,
-		RunFunc:                  rerollGiveaway,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "Reroll Giveaway",
+		DefaultEnabled:            true,
+		ApplicationCommandEnabled: true,
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		IsResponseEphemeral:       false,
+		ApplicationCommandType:    3,
+		RunFunc:                   rerollGiveaway,
 	}
 )
 
@@ -116,7 +116,7 @@ func cancelGiveaway(data *dcmd.Data) (interface{}, error) {
 		return "Not a giveaway", nil
 	}
 
-	if pointer.GetBool(giveaway.Active) {
+	if !pointer.GetBool(giveaway.Active) {
 		return "Giveaway is already inactive", nil
 	}
 
@@ -158,7 +158,7 @@ func startGiveaway(data *dcmd.Data) (interface{}, error) {
 	}
 
 	if data.Switch("Co-host").Value != nil {
-		giveaway.CoHostID = data.Switch("Co-host").User().ID
+		giveaway.UserID = data.Switch("Co-host").User().ID
 	}
 
 	giveaway.ChannelID = channelID
@@ -212,19 +212,9 @@ func generateGiveawayDescription(giveaway Giveaway) (string, error) {
 
 			description += fmt.Sprintf("%s, ", winnerMember.User.Mention())
 		}
-		description = fmt.Sprintf("%s\n\n", description[:len(description)-2])
 	}
 
-	if giveaway.CoHostID != 0 {
-		coHost, memberErr := bot.GetMember(giveaway.GuildID, giveaway.CoHostID)
-		if memberErr != nil {
-			return "", memberErr
-		}
-
-		description += fmt.Sprintf("**Hosted By**: %s, %s\n\n", coHost.User.Mention(), member.User.Mention())
-	} else {
-		description += fmt.Sprintf("**Hosted By**: %s\n\n", member.User.Mention())
-	}
+	description = fmt.Sprintf("%s\n\n**Hosted By**: %s\n\n", description[:len(description)-2], member.User.Mention())
 
 	if winnerCount == 0 {
 		description += "React with 🎉 to enter the giveaway"

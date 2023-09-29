@@ -132,10 +132,9 @@ type YAGCommand struct {
 	// note that these settings are still checked when the command is run, but they just show the command in the client even if you can't use it in this case, so its just a visual limitation of slash commands.
 	//
 	// If it's disabled in all channels, then for default_enabled = true commands, it adds the everyone role to the blacklist, otherwise it adds no role to the whitelist (does this even work? can i use the everyone role in this context?)
-	SlashCommandEnabled bool
-	//Only 1 of the following 2 values can be true at a time.
-	ContextMenuUser    bool
-	ContextMenuMessage bool
+	ApplicationCommandEnabled bool
+	ApplicationCommandType    discordgo.ApplicationCommandType // defaults to 0x1 as slash command
+	NameLocalizations         *map[discordgo.Locale]string
 
 	// Wether the command is enabled in all guilds by default or not
 	DefaultEnabled bool
@@ -169,7 +168,7 @@ func (yc *YAGCommand) Switches() []*dcmd.ArgDef {
 	return yc.ArgSwitches
 }
 func (yc *YAGCommand) IsContextMessage() bool {
-	return yc.ContextMenuMessage || yc.ContextMenuUser
+	return yc.ApplicationCommandType == 2 || yc.ApplicationCommandType == 3
 }
 
 var metricsExcecutedCommands = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -193,8 +192,6 @@ func (yc *YAGCommand) Run(data *dcmd.Data) (interface{}, error) {
 	if confSetTyping.GetBool() && data.TriggerType != dcmd.TriggerTypeSlashCommands {
 		common.BotSession.ChannelTyping(data.ChannelID)
 	}
-
-	logger := yc.Logger(data)
 
 	// Track how long execution of a command took
 	started := time.Now()
@@ -932,6 +929,7 @@ func (yc *YAGCommand) GetTrigger() *dcmd.Trigger {
 	if len(yc.Middlewares) > 0 {
 		trigger = trigger.SetMiddlewares(yc.Middlewares...)
 	}
+
 	return trigger
 }
 

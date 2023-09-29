@@ -21,15 +21,15 @@ import (
 )
 
 var Command = &commands.YAGCommand{
-	CmdCategory:         commands.CategoryFun,
-	Cooldown:            5,
-	Name:                "Forex",
-	Aliases:             []string{"Money"},
-	Description:         "💱 convert value from one currency to another.",
-	RunInDM:             true,
-	DefaultEnabled:      true,
-	SlashCommandEnabled: true,
-	RequiredArgs:        3,
+	CmdCategory:               commands.CategoryFun,
+	Cooldown:                  5,
+	Name:                      "Forex",
+	Aliases:                   []string{"Money"},
+	Description:               "💱 convert value from one currency to another.",
+	RunInDM:                   true,
+	DefaultEnabled:            true,
+	ApplicationCommandEnabled: true,
+	RequiredArgs:              3,
 	Arguments: []*dcmd.ArgDef{
 		{Name: "Amount", Type: dcmd.Float}, {Name: "From", Type: dcmd.String}, {Name: "To", Type: dcmd.String},
 	},

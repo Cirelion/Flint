@@ -9,11 +9,11 @@ import (
 
 var (
 	AddToHeartBoard = &commands.YAGCommand{
-		CmdCategory:         commands.CategoryTool,
-		Name:                "AddToHeartBoard",
-		Description:         "Adds post to heart board",
-		RequiredArgs:        1,
-		SlashCommandEnabled: true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "AddToHeartBoard",
+		Description:               "Adds post to heart board",
+		RequiredArgs:              1,
+		ApplicationCommandEnabled: true,
 		Arguments: []*dcmd.ArgDef{
 			{
 				Name: "MessageID",

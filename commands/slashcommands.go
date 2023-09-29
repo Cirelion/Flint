@@ -50,17 +50,17 @@ func (p *Plugin) startSlashCommandsUpdater() {
 }
 
 func (p *Plugin) updateGlobalCommands() {
-	result := make([]*discordgo.CreateApplicationCommandRequest, 0)
+	result := make([]*discordgo.ApplicationCommand, 0)
 
 	for _, v := range CommandSystem.Root.Commands {
 		if cmd := p.yagCommandToSlashCommand(v); cmd != nil {
-			logger.Infof("%s is a global slash command: default enabled: %v", cmd.Name, cmd.DefaultPermission)
+			logger.Infof("%s is a global application command: default enabled: %v", cmd.Name, *cmd.DefaultPermission)
 			result = append(result, cmd)
 		}
 	}
 
 	for _, v := range slashCommandsContainers {
-		logger.Infof("%s is a slash command container: default enabled: %v", v.container.Names[0], v.defaultPermissions)
+		logger.Infof("%s is an application command container: default enabled: %v", v.container.Names[0], v.defaultPermissions)
 		result = append(result, p.containerToSlashCommand(v))
 	}
 
@@ -69,7 +69,7 @@ func (p *Plugin) updateGlobalCommands() {
 	current := ""
 	err := common.RedisPool.Do(radix.Cmd(&current, "GET", "slash_commands_current"))
 	if err != nil {
-		logger.WithError(err).Error("failed retrieving current saved slash commands")
+		logger.WithError(err).Error("failed retrieving current saved application commands")
 		return
 	}
 
@@ -77,14 +77,12 @@ func (p *Plugin) updateGlobalCommands() {
 		logger.Info("Slash commands identical, skipping update")
 		return
 	}
-	// fmt.Println(string(encoded))
 
-	logger.Info("Slash commands changed, updating....")
+	logger.Info("Application commands changed, updating...")
 
-	ret, err := common.BotSession.BulkOverwriteGlobalApplicationCommands(common.BotApplication.ID, result)
-	// ret, err := common.BotSession.BulkOverwriteGuildApplicationCommands(common.BotApplication.ID, 614909558585819162, result)
+	ret, err := common.BotSession.ApplicationCommandBulkOverwrite(common.BotApplication.ID, 0, result)
 	if err != nil {
-		logger.WithError(err).Error("failed updating global slash commands")
+		logger.WithError(err).Error("failed updating global application commands")
 		return
 	}
 
@@ -93,7 +91,7 @@ OUTER:
 	for _, v := range ret {
 		for _, rs := range CommandSystem.Root.Commands {
 			if cast, ok := rs.Command.(*YAGCommand); ok {
-				if cast.SlashCommandEnabled && strings.EqualFold(v.Name, cast.Name) {
+				if cast.ApplicationCommandEnabled && strings.EqualFold(v.Name, cast.Name) {
 					cast.slashCommandID = v.ID
 					continue OUTER
 				}
@@ -110,16 +108,15 @@ OUTER:
 	}
 
 	atomic.StoreInt32(slashCommandsIdsSet, 1)
-
 	err = common.RedisPool.Do(radix.Cmd(nil, "SET", "slash_commands_current", string(encoded)))
 	if err != nil {
 		logger.WithError(err).Error("failed setting current slash commands in redis")
 	}
 }
 
-func (p *Plugin) containerToSlashCommand(container *slashCommandsContainer) *discordgo.CreateApplicationCommandRequest {
+func (p *Plugin) containerToSlashCommand(container *slashCommandsContainer) *discordgo.ApplicationCommand {
 	t := true
-	req := &discordgo.CreateApplicationCommandRequest{
+	req := &discordgo.ApplicationCommand{
 		Name:              strings.ToLower(container.container.Names[0]),
 		Description:       common.CutStringShort(container.container.Description, 100),
 		DefaultPermission: &t,
@@ -137,14 +134,8 @@ func (p *Plugin) containerToSlashCommand(container *slashCommandsContainer) *dis
 			kind = discordgo.ApplicationCommandOptionSubCommandGroup
 		}
 
-		name := cast.Name
-
-		if !cast.IsContextMessage() {
-			name = strings.ToLower(name)
-		}
-
 		opt := &discordgo.ApplicationCommandOption{
-			Name:        name,
+			Name:        strings.ToLower(cast.Name),
 			Description: common.CutStringShort(cast.Description, 100),
 			Type:        kind,
 			Options:     innerOpts,
@@ -156,56 +147,49 @@ func (p *Plugin) containerToSlashCommand(container *slashCommandsContainer) *dis
 	return req
 }
 
-func (p *Plugin) yagCommandToSlashCommand(cmd *dcmd.RegisteredCommand) *discordgo.CreateApplicationCommandRequest {
-
+func (p *Plugin) yagCommandToSlashCommand(cmd *dcmd.RegisteredCommand) *discordgo.ApplicationCommand {
 	cast, ok := cmd.Command.(*YAGCommand)
 	if !ok {
-		// probably a container, which is handled seperately, see RegisterSlashCommandsContainer
+		// probably a container, which is handled separately, see RegisterSlashCommandsContainer
 		return nil
 	}
 
-	if !cast.SlashCommandEnabled {
+	if !cast.ApplicationCommandEnabled {
 		// not enabled for slash commands
 		return nil
 	}
 	t := true
 
-	if cast.ContextMenuUser {
-		return &discordgo.CreateApplicationCommandRequest{
+	_, opts := cast.slashCommandOptions()
+	applicationCommand := &discordgo.ApplicationCommand{
+		Name:              strings.ToLower(cmd.Trigger.Names[0]),
+		Description:       common.CutStringShort(cast.Description, 100),
+		DefaultPermission: &t,
+		Options:           opts,
+		NSFW:              &cast.NSFW,
+	}
+
+	if cmd.Trigger.AppCommandNotSlash {
+		applicationCommand = &discordgo.ApplicationCommand{
+			DefaultPermission: &t,
 			Name:              cmd.Trigger.Names[0],
-			Type:              discordgo.ApplicationCommandType(2),
-			DefaultPermission: &t,
-		}
-	} else if cast.ContextMenuMessage {
-		return &discordgo.CreateApplicationCommandRequest{
-			Name:              cmd.Trigger.Names[0],
-			Type:              discordgo.ApplicationCommandType(3),
-			DefaultPermission: &t,
-		}
-	} else {
-		_, opts := cast.slashCommandOptions()
-		return &discordgo.CreateApplicationCommandRequest{
-			Name:              strings.ToLower(cmd.Trigger.Names[0]),
-			Description:       common.CutStringShort(cast.Description, 100),
-			DefaultPermission: &t,
-			Options:           opts,
-			NSFW:              cast.NSFW,
+			NameLocalizations: cast.NameLocalizations,
+			Type:              cast.ApplicationCommandType,
+			NSFW:              &cast.NSFW,
 		}
 	}
 
+	return applicationCommand
 }
 
 func (yc *YAGCommand) slashCommandOptions() (turnedIntoSubCommands bool, result []*discordgo.ApplicationCommandOption) {
-
 	var subCommands []*discordgo.ApplicationCommandOption
 
 	for i, v := range yc.Arguments {
 
 		opts := v.Type.SlashCommandOptions(v)
-		if !yc.IsContextMessage() {
-			for _, v := range opts {
-				v.Name = strings.ToLower(v.Name)
-			}
+		for _, v := range opts {
+			v.Name = strings.ToLower(v.Name)
 		}
 
 		if len(opts) > 1 && i == 0 {
@@ -220,7 +204,7 @@ func (yc *YAGCommand) slashCommandOptions() (turnedIntoSubCommands bool, result 
 
 				subCommands = append(subCommands, &discordgo.ApplicationCommandOption{
 					Type:        kind,
-					Name:        "by-" + opt.Name,
+					Name:        "by-" + strings.ToLower(opt.Name),
 					Description: common.CutStringShort(yc.Description, 100),
 					Options: []*discordgo.ApplicationCommandOption{
 						opt,
@@ -259,16 +243,12 @@ func (yc *YAGCommand) slashCommandOptions() (turnedIntoSubCommands bool, result 
 	for _, v := range yc.ArgSwitches {
 		if v.Type == nil {
 			adding := v.StandardSlashCommandOption(discordgo.ApplicationCommandOptionBoolean)
-			if !yc.IsContextMessage() {
-				adding.Name = strings.ToLower(adding.Name)
-			}
+			adding.Name = strings.ToLower(adding.Name)
 			sortedResult = append(sortedResult, adding)
 		} else {
 			adding := v.Type.SlashCommandOptions(v)
-			if !yc.IsContextMessage() {
-				for _, v := range adding {
-					v.Name = strings.ToLower(v.Name)
-				}
+			for _, v := range adding {
+				v.Name = strings.ToLower(v.Name)
 			}
 			sortedResult = append(sortedResult, adding...)
 		}
@@ -324,7 +304,7 @@ func updateSlashCommandGuildPermissions(gs *dstate.GuildSet) (updated bool, err 
 	// Start with root commands
 	for _, v := range CommandSystem.Root.Commands {
 		if cast, ok := v.Command.(*YAGCommand); ok {
-			if cast.SlashCommandEnabled {
+			if cast.ApplicationCommandEnabled {
 				perms, err := cast.TopLevelSlashCommandPermissions(commandSettings, gs)
 				if err != nil {
 					return false, err
@@ -395,7 +375,7 @@ func handleInteractionCreate(evt *eventsystem.EventData) {
 	}
 
 	// serialized, _ := json.MarshalIndent(interaction.Interaction, "", "  ")
-	// logger.Infof("Got interaction %#v", interaction.Interaction)
+	//logger.Infof("Got interaction %#v", interaction.Interaction)
 	// fmt.Println(string(serialized))
 
 	err := CommandSystem.CheckInteraction(common.BotSession, &interaction.Interaction)
@@ -736,7 +716,7 @@ OUTER:
 func IsSlashCommandPermissionCommandEnabled(fullName string, overrides []*models.CommandsChannelsOverride) bool {
 	// check if atleast one command override has it explicitly enabled, this takes precedence
 	for _, override := range overrides {
-		if isSlashCommandEnabledChannelOverride(fullName, override) {
+		if isApplicationCommandEnabledChannelOverride(fullName, override) {
 			return true
 		}
 	}
@@ -744,7 +724,7 @@ func IsSlashCommandPermissionCommandEnabled(fullName string, overrides []*models
 	return false
 }
 
-func isSlashCommandEnabledChannelOverride(fullName string, override *models.CommandsChannelsOverride) bool {
+func isApplicationCommandEnabledChannelOverride(fullName string, override *models.CommandsChannelsOverride) bool {
 	for _, cmdOverride := range override.R.CommandsCommandOverrides {
 		if common.ContainsStringSliceFold(cmdOverride.Commands, fullName) {
 			return cmdOverride.CommandsEnabled

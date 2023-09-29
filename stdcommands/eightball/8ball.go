@@ -16,8 +16,8 @@ var Command = &commands.YAGCommand{
 	Arguments: []*dcmd.ArgDef{
 		{Name: "Question", Type: dcmd.String},
 	},
-	DefaultEnabled:      true,
-	SlashCommandEnabled: true,
+	DefaultEnabled:            true,
+	ApplicationCommandEnabled: true,
 	RunFunc: func(data *dcmd.Data) (interface{}, error) {
 		// Standard set of Magic 8Ball answers.
 		// See https://en.wikipedia.org/wiki/Magic_8-Ball#Possible_answers

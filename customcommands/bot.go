@@ -127,8 +127,8 @@ var cmdEvalCommand = &commands.YAGCommand{
 	Arguments: []*dcmd.ArgDef{
 		{Name: "code", Type: dcmd.String},
 	},
-	SlashCommandEnabled: false,
-	DefaultEnabled:      true,
+	ApplicationCommandEnabled: false,
+	DefaultEnabled:            true,
 	RunFunc: func(data *dcmd.Data) (interface{}, error) {
 		hasCoreWriteRole := false
 
@@ -193,8 +193,8 @@ var cmdListCommands = &commands.YAGCommand{
 		{Name: "ID", Type: dcmd.Int},
 		{Name: "Name-Or-Trigger", Type: dcmd.String},
 	},
-	SlashCommandEnabled: true,
-	DefaultEnabled:      false,
+	ApplicationCommandEnabled: true,
+	DefaultEnabled:            false,
 	ArgSwitches: []*dcmd.ArgDef{
 		{Name: "file", Help: "Send responses in file"},
 		{Name: "color", Help: "Use syntax highlighting (Go)"},

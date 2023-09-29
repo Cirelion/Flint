@@ -15,11 +15,11 @@ import (
 var (
 	pollReactions = [...]string{"1⃣", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣", "🔟"}
 	Poll          = &commands.YAGCommand{
-		CmdCategory:         commands.CategoryTool,
-		Name:                "Poll",
-		Description:         "Create regular poll",
-		RequiredArgs:        1,
-		SlashCommandEnabled: true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "Poll",
+		Description:               "Create regular poll",
+		RequiredArgs:              1,
+		ApplicationCommandEnabled: true,
 		Arguments: []*dcmd.ArgDef{
 			{
 				Name: "Question",
@@ -30,11 +30,11 @@ var (
 		RunFunc: createPoll,
 	}
 	StrawPoll = &commands.YAGCommand{
-		CmdCategory:         commands.CategoryTool,
-		Name:                "StrawPoll",
-		Description:         "Create a strawpoll",
-		RequiredArgs:        3,
-		SlashCommandEnabled: true,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "StrawPoll",
+		Description:               "Create a strawpoll",
+		RequiredArgs:              3,
+		ApplicationCommandEnabled: true,
 		Arguments: []*dcmd.ArgDef{
 			{
 				Name: "Question",
@@ -58,14 +58,14 @@ var (
 		RunFunc: createStrawPoll,
 	}
 	EndPoll = &commands.YAGCommand{
-		CmdCategory:              commands.CategoryTool,
-		Name:                     "EndPoll",
-		RequireDiscordPerms:      []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp: "ManageMessages",
-		IsResponseEphemeral:      true,
-		SlashCommandEnabled:      true,
-		ContextMenuMessage:       true,
-		RunFunc:                  endPoll,
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "End Poll",
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		IsResponseEphemeral:       true,
+		ApplicationCommandEnabled: true,
+		ApplicationCommandType:    3,
+		RunFunc:                   endPoll,
 	}
 )
 

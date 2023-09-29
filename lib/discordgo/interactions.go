@@ -43,7 +43,7 @@ type ApplicationCommand struct {
 	Description              string                      `json:"description,omitempty"`
 	DescriptionLocalizations *map[Locale]string          `json:"description_localizations,omitempty"`
 	Options                  []*ApplicationCommandOption `json:"options"`
-	NSFW                     bool                        `json:"nsfw,omitempty"`
+	NSFW                     *bool                       `json:"nsfw,omitempty"`
 }
 
 // ApplicationCommandOptionType indicates the type of a slash command's option.
@@ -295,9 +295,10 @@ type InteractionData interface {
 
 // ApplicationCommandInteractionData contains the data of application command interaction.
 type ApplicationCommandInteractionData struct {
-	ID       int64                                      `json:"id,string"`
-	Name     string                                     `json:"name"`
-	Resolved *ApplicationCommandInteractionDataResolved `json:"resolved"`
+	ID         int64                                      `json:"id,string"`
+	Name       string                                     `json:"name"`
+	Resolved   *ApplicationCommandInteractionDataResolved `json:"resolved"`
+	AppCmdType ApplicationCommandType                     `json:"type"`
 
 	// Slash command options
 	Options []*ApplicationCommandInteractionDataOption `json:"options"`

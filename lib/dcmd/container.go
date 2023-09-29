@@ -85,7 +85,45 @@ func (c *Container) Run(data *Data) (interface{}, error) {
 			options = options[0].Options
 		}
 
-		matchingCmd, _ = c.FindCommand(name)
+		var appCmdNotSlash bool
+		if data.SlashCommandTriggerData.Interaction.Type != 0 {
+			appCmdNotSlash = true
+		}
+
+		matchingCmd, _ = c.FindCommand(name, appCmdNotSlash)
+
+		if data.SlashCommandTriggerData.Interaction.DataCommand.AppCmdType == discordgo.UserApplicationCommand &&
+			len(data.SlashCommandTriggerData.Interaction.DataCommand.Options) > 0 {
+
+			arg := &discordgo.ApplicationCommandInteractionDataOption{
+				Name:  matchingCmd.Trigger.Names[0],
+				Value: data.SlashCommandTriggerData.Interaction.DataCommand.TargetID,
+			}
+			data.SlashCommandTriggerData.Interaction.DataCommand.Options[0] = arg
+		} else if data.SlashCommandTriggerData.Interaction.DataCommand.AppCmdType == discordgo.MessageApplicationCommand &&
+			len(data.SlashCommandTriggerData.Interaction.DataCommand.Options) > 0 {
+
+			message, err := data.Session.ChannelMessage(data.GuildData.CS.ID, data.SlashCommandTriggerData.Interaction.DataCommand.TargetID)
+			if err != nil {
+				return nil, err
+			}
+			arg := &discordgo.ApplicationCommandInteractionDataOption{
+				Name:  matchingCmd.Trigger.Names[0],
+				Type:  3,
+				Value: message.Content,
+			}
+			data.SlashCommandTriggerData.Interaction.DataCommand.Options[0] = arg
+		} else if data.SlashCommandTriggerData.Interaction.Type == discordgo.InteractionModalSubmit {
+			matchingCmd, _ = c.FindCommand(data.SlashCommandTriggerData.Interaction.ModalSubmitData().CustomID, appCmdNotSlash)
+			defs, _, _ := matchingCmd.Command.(CmdWithArgDefs).ArgDefs(nil)
+
+			arg := &discordgo.ApplicationCommandInteractionDataOption{
+				Name:  strings.ToLower(defs[0].Name),
+				Type:  3,
+				Value: data.SlashCommandTriggerData.Interaction.ModalSubmitData().Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
+			}
+			data.SlashCommandTriggerData.Interaction.DataCommand.Options[0] = arg
+		}
 
 		// add to the container chain and set the parse helper
 		data.ContainerChain = append(data.ContainerChain, c)
@@ -183,10 +221,14 @@ func (c *Container) shouldIgnore(data *Data) bool {
 	return false
 }
 
-func (c *Container) FindCommand(searchStr string) (cmd *RegisteredCommand, rest string) {
+func (c *Container) FindCommand(searchStr string, appCmdNotSlash ...bool) (cmd *RegisteredCommand, rest string) {
 	split := strings.SplitN(searchStr, " ", 2)
 	if len(split) < 1 {
 		return
+	}
+
+	if len(appCmdNotSlash) > 0 {
+		split = []string{searchStr}
 	}
 
 	// Start looking for matches in all subcommands
@@ -201,7 +243,7 @@ func (c *Container) FindCommand(searchStr string) (cmd *RegisteredCommand, rest 
 			cmd = c
 			rest = strings.TrimSpace(searchStr[len(name):])
 
-			return
+			return cmd, rest
 		}
 	}
 
@@ -340,10 +382,8 @@ func ValidateCommandPanic(cmd Cmd, trigger *Trigger) {
 }
 
 func ValidateCommand(cmd Cmd, trigger *Trigger) error {
-
-	_, isContextMessageOk := cmd.(CmdIsContextMessage)
-
-	if !isContextMessageOk && !CmdNameRegex.MatchString(trigger.Names[0]) {
+	// KRAAKA IMPORTANT
+	if !CmdNameRegex.MatchString(trigger.Names[0]) && !trigger.AppCommandNotSlash {
 		return errors.New("Name doesn't match legal regex")
 	}
 
@@ -352,7 +392,7 @@ func ValidateCommand(cmd Cmd, trigger *Trigger) error {
 		defs, _, _ := argDefsCommand.ArgDefs(nil)
 		for _, v := range defs {
 			if !CmdNameRegex.MatchString(v.Name) {
-				return errors.New(v.Name + ": arg doesn't match legal regex")
+				return errors.New(v.Name + ": arg dosn't match legal regex")
 			}
 		}
 	}
@@ -363,7 +403,7 @@ func ValidateCommand(cmd Cmd, trigger *Trigger) error {
 
 		for _, v := range defs {
 			if !CmdNameRegex.MatchString(v.Name) {
-				return errors.New(v.Name + ": switch doesn't match legal regex")
+				return errors.New(v.Name + ": switch dosn't match legal regex")
 			}
 		}
 	}

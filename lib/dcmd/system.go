@@ -68,7 +68,6 @@ func (sys *System) CheckMessage(s *discordgo.Session, m *discordgo.MessageCreate
 
 // CheckInteraction checks a interaction and runs a command if found
 func (sys *System) CheckInteraction(s *discordgo.Session, interaction *discordgo.Interaction) error {
-
 	data, err := sys.FillDataInteraction(s, interaction)
 	if err != nil {
 		return err
@@ -261,6 +260,21 @@ func (sys *System) FillDataInteraction(s *discordgo.Session, interaction *discor
 	user := interaction.User
 	if interaction.Member != nil {
 		user = interaction.Member.User
+	}
+
+	if interaction.Type == discordgo.InteractionApplicationCommand &&
+		(interaction.DataCommand.AppCmdType == discordgo.UserApplicationCommand ||
+			interaction.DataCommand.AppCmdType == discordgo.MessageApplicationCommand) {
+
+		arg := &discordgo.ApplicationCommandInteractionDataOption{}
+		interaction.DataCommand.Options = append(interaction.DataCommand.Options, arg)
+	}
+
+	// same thing as above dealing with modal, specific case remindme app command
+	if interaction.Type == discordgo.InteractionModalSubmit {
+		interaction.DataCommand = &discordgo.ApplicationCommandInteractionData{}
+		arg := &discordgo.ApplicationCommandInteractionDataOption{}
+		interaction.DataCommand.Options = append(interaction.DataCommand.Options, arg)
 	}
 
 	data := &Data{
