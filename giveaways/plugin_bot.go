@@ -57,7 +57,6 @@ func (p *Plugin) BotInit() {
 func (p *Plugin) AddCommands() {
 	commands.AddRootCommands(p,
 		StartGiveaway,
-		EndGiveaway,
 		CancelGiveaway,
 		RerollGiveaway,
 	)

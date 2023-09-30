@@ -36,18 +36,6 @@ var (
 		},
 		RunFunc: startGiveaway,
 	}
-	EndGiveaway = &commands.YAGCommand{
-		CmdCategory:               commands.CategoryTool,
-		Name:                      "End Giveaway",
-		DefaultEnabled:            true,
-		ApplicationCommandEnabled: true,
-		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
-		RequiredDiscordPermsHelp:  "ManageMessages",
-		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:       true,
-		ApplicationCommandType:    3,
-		RunFunc:                   endGiveaway,
-	}
 	CancelGiveaway = &commands.YAGCommand{
 		CmdCategory:               commands.CategoryTool,
 		Name:                      "Cancel Giveaway",

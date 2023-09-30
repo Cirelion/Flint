@@ -546,6 +546,35 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
 </div>
 <hr />
 
+<p>Application configuration</p>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group">
+            <label>Conversation submission channel</label><br>
+            <select class="form-control" name="ConversationSubmissionChannel">
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.ConversationSubmissionChannel true "None"}}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group">
+            <label>Mini mod submission channel</label>
+            <select class="form-control" name="ModApplicationSubmissionChannel">
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.ModApplicationSubmissionChannel true "None"}}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group">
+            <label>Event submission</label><br>
+            <select class="form-control" name="EventSubmissionChannel">
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.EventSubmissionChannel true "None"}}
+            </select>
+        </div>
+    </div>
+</div>
+<hr />
+
 <p>Star/Heartboard configuration</p>
 <div class="row">
     <div class="col-sm-6 col-md-3">

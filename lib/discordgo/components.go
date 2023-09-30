@@ -239,3 +239,15 @@ const (
 	TextInputShort     TextInputStyle = 1
 	TextInputParagraph TextInputStyle = 2
 )
+
+// ParseCustomID is a method to parse input custom IDs into human readable strings.
+func (m TextInput) ParseCustomID() string {
+	switch m.CustomID {
+	case "conversation_link":
+		return "Conversation link"
+	case "conversation_reason":
+		return "Conversation reason"
+	}
+
+	return m.CustomID
+}

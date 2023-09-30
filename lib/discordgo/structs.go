@@ -14,6 +14,7 @@ package discordgo
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ import (
 
 // A Session represents a connection to the Discord API.
 type Session struct {
+	sync.RWMutex
+
 	// General configurable settings.
 
 	// Authentication token for this session
@@ -60,8 +63,14 @@ type Session struct {
 	// e.g false = launch event handlers in their own goroutines.
 	SyncEvents bool
 
+	// Whether the Data Websocket is ready
+	DataReady bool // NOTE: Maye be deprecated soon
+
 	// Max number of REST API retries
 	MaxRestRetries int
+
+	// Stores a mapping of guild id's to VoiceConnections
+	VoiceConnections map[string]*VoiceConnection
 
 	// Managed state object, updated internally with events when
 	// StateEnabled is true.
@@ -70,8 +79,17 @@ type Session struct {
 	// The http client used for REST requests
 	Client *http.Client
 
+	// The dialer used for WebSocket connection
+	Dialer *websocket.Dialer
+
+	// The user agent used for REST APIs
+	UserAgent string
+
 	// Stores the last HeartbeatAck that was recieved (in UTC)
 	LastHeartbeatAck time.Time
+
+	// Stores the last Heartbeat sent (in UTC)
+	LastHeartbeatSent time.Time
 
 	// used to deal with rate limits
 	Ratelimiter *RateLimiter
@@ -85,6 +103,24 @@ type Session struct {
 	handlersMu   sync.RWMutex
 	handlers     map[string][]*eventHandlerInstance
 	onceHandlers map[string][]*eventHandlerInstance
+
+	// The websocket connection.
+	wsConn *websocket.Conn
+
+	// When nil, the session is not listening.
+	listening chan interface{}
+
+	// sequence tracks the current gateway api websocket sequence number
+	sequence *int64
+
+	// stores sessions current Discord Gateway
+	gateway string
+
+	// stores session ID of current Gateway connection
+	sessionID string
+
+	// used to make sure gateway websocket writes do not happen concurrently
+	wsMutex sync.Mutex
 }
 
 // UserConnection is a Connection returned from the UserConnections endpoint
@@ -842,10 +878,10 @@ type Relationship struct {
 // A TooManyRequests struct holds information received from Discord
 // when receiving a HTTP 429 response.
 type TooManyRequests struct {
-	Bucket     string  `json:"bucket"`
-	Message    string  `json:"message"`
-	RetryAfter float64 `json:"retry_after"`
-	Global     bool    `json:"global"`
+	Bucket     string        `json:"bucket"`
+	Message    string        `json:"message"`
+	RetryAfter time.Duration `json:"retry_after"`
+	Global     bool          `json:"global"`
 }
 
 func (t *TooManyRequests) RetryAfterDur() time.Duration {
@@ -1210,15 +1246,30 @@ type Webhook struct {
 
 // WebhookParams is a struct for webhook params, used in the WebhookExecute command.
 type WebhookParams struct {
-	Content         string             `json:"content,omitempty"`
-	Username        string             `json:"username,omitempty"`
-	AvatarURL       string             `json:"avatar_url,omitempty"`
-	TTS             bool               `json:"tts,omitempty"`
-	File            *File              `json:"-,omitempty"`
-	Components      []MessageComponent `json:"components"`
-	Embeds          []*MessageEmbed    `json:"embeds,omitempty"`
-	Flags           int64              `json:"flags,omitempty"`
-	AllowedMentions *AllowedMentions   `json:"allowed_mentions,omitempty"`
+	Content         string                `json:"content,omitempty"`
+	Username        string                `json:"username,omitempty"`
+	AvatarURL       string                `json:"avatar_url,omitempty"`
+	TTS             bool                  `json:"tts,omitempty"`
+	File            *File                 `json:"-"`
+	Files           []*File               `json:"-"`
+	Components      []MessageComponent    `json:"components"`
+	Embeds          []*MessageEmbed       `json:"embeds,omitempty"`
+	Attachments     *[]*MessageAttachment `json:"attachments,omitempty"`
+	AllowedMentions *AllowedMentions      `json:"allowed_mentions,omitempty"`
+	// Only MessageFlagsSuppressEmbeds and MessageFlagsEphemeral can be set.
+	// MessageFlagsEphemeral can only be set when using Followup Message Create endpoint.
+	Flags MessageFlags `json:"flags,omitempty"`
+}
+
+// WebhookEdit stores data for editing of a webhook message.
+type WebhookEdit struct {
+	Content         *string               `json:"content,omitempty"`
+	Components      *[]MessageComponent   `json:"components,omitempty"`
+	Embeds          *[]*MessageEmbed      `json:"embeds,omitempty"`
+	File            *File                 `json:"-"`
+	Files           []*File               `json:"-"`
+	Attachments     *[]*MessageAttachment `json:"attachments,omitempty"`
+	AllowedMentions *AllowedMentions      `json:"allowed_mentions,omitempty"`
 }
 
 // MessageReaction stores the data for a message reaction.

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/botlabs-gg/yagpdb/v2/analytics"
 	"github.com/botlabs-gg/yagpdb/v2/antiphishing"
+	"github.com/botlabs-gg/yagpdb/v2/applications"
 	"github.com/botlabs-gg/yagpdb/v2/autorole"
 	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
 	"github.com/botlabs-gg/yagpdb/v2/common/prom"
@@ -46,6 +47,7 @@ func main() {
 	run.Init()
 
 	//BotSession.LogLevel = discordgo.LogInformational
+	applications.RegisterPlugin()
 	polls.RegisterPlugin()
 	giveaways.RegisterPlugin()
 	games.RegisterPlugin()

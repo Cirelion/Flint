@@ -79,6 +79,11 @@ type Config struct {
 	OnDutyChannelTwo            string `valid:"channel,true"`
 	OnDutyChannelTwoDescription string `valid:"template,5000"`
 
+	//Applications
+	ConversationSubmissionChannel   string `valid:"channel,true"`
+	ModApplicationSubmissionChannel string `valid:"channel,true"`
+	EventSubmissionChannel          string `valid:"channel,true"`
+
 	// Misc
 	CleanEnabled     bool
 	ReportEnabled    bool
@@ -98,6 +103,19 @@ type Config struct {
 
 func (c *Config) IntMuteRole() (r int64) {
 	r, _ = strconv.ParseInt(c.MuteRole, 10, 64)
+	return
+}
+
+func (c *Config) IntConversationSubmissionChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.ConversationSubmissionChannel, 10, 64)
+	return
+}
+func (c *Config) IntModApplicationSubmissionChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.ModApplicationSubmissionChannel, 10, 64)
+	return
+}
+func (c *Config) IntEventSubmissionChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.EventSubmissionChannel, 10, 64)
 	return
 }
 
