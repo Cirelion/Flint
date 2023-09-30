@@ -1916,6 +1916,55 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 	},
 	{
+		CmdCategory:               commands.CategoryModeration,
+		Name:                      "Set Off Duty",
+		DefaultEnabled:            true,
+		ApplicationCommandEnabled: true,
+		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp:  "KickMembers",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		IsResponseEphemeral:       true,
+		ApplicationCommandType:    2,
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			userID := parsed.SlashCommandTriggerData.Interaction.DataCommand.TargetID
+			guildID := parsed.GuildData.GS.ID
+
+			config, err := GetConfig(guildID)
+			member, err := bot.GetMember(guildID, userID)
+			if err != nil {
+				return nil, err
+			}
+
+			onDuty := &OnDuty{UserID: uint64(member.User.ID)}
+			err = common.GORM.Model(onDuty).First(onDuty).Error
+			if err != nil {
+				return "User has never gone On Duty.", err
+			}
+
+			if common.ContainsInt64Slice(member.Member.Roles, config.IntOnDutyRole()) {
+				err = common.BotSession.GuildMemberRoleRemove(guildID, member.User.ID, config.IntOnDutyRole())
+				onDuty.OnDuty = false
+				if err != nil {
+					return "Something went wrong trying to remove the role.", err
+				}
+
+				err = common.GORM.Model(onDuty).Update(onDuty).Error
+				if err != nil {
+					return nil, err
+				}
+
+				err = bot.SendDM(userID, fmt.Sprintf("You have been set Off Duty by %s", parsed.Author.Mention()))
+				if err != nil {
+					return "Error trying to send DM informing the member that was set Off Duty.", err
+				}
+
+				return fmt.Sprintf("%s set Off Duty!", member.User.Mention()), nil
+			} else {
+				return fmt.Sprintf("%s is already Off Duty!", member.User.Mention()), nil
+			}
+		},
+	},
+	{
 		CustomEnabled:             true,
 		CmdCategory:               commands.CategoryModeration,
 		Name:                      "SetOnDutyDuration",
