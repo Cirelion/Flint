@@ -13,6 +13,7 @@ var (
 	ConversationLink               = "Conversation link"
 	ConversationReason             = "Conversation reason"
 	Select                         = "application_select"
+	MiniModSubmit                  = "Mini mod submission"
 	Apply                          = &commands.YAGCommand{
 		CmdCategory:               commands.CategoryTool,
 		Name:                      "PostApplicationEmbed",
@@ -24,7 +25,7 @@ var (
 		RequiredArgs:              1,
 		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
 		Arguments: []*dcmd.ArgDef{
-			{Name: "Variant", Help: "Type of application embed you want to post (conv)", Type: dcmd.String},
+			{Name: "Variant", Help: "Type of application embed you want to post [conv|mod]", Type: dcmd.String},
 		},
 		IsResponseEphemeral: true,
 		RunFunc:             startApplication,
@@ -34,7 +35,7 @@ var (
 func startApplication(data *dcmd.Data) (interface{}, error) {
 	message := generateApplicationMessage(data.Args[0].Str())
 	if message == nil {
-		return "Incorrect variant set, possible variants are: [conv]", nil
+		return "Incorrect variant set, possible variants are: [conv|mod]", nil
 	}
 
 	_, err := common.BotSession.ChannelMessageSendComplex(data.ChannelID, message)
@@ -48,7 +49,7 @@ func startApplication(data *dcmd.Data) (interface{}, error) {
 func generateApplicationMessage(variant string) *discordgo.MessageSend {
 	var title string
 	var description string
-	var options []discordgo.SelectMenuOption
+	var components []discordgo.MessageComponent
 
 	switch variant {
 	case "conv":
@@ -56,18 +57,34 @@ func generateApplicationMessage(variant string) *discordgo.MessageSend {
 		description = "Submit your conversation link here!\n\n" +
 			"This will get sent directly to Pat to use in training our new proprietary model! SFW and NSFW are allowed, your conversations won't be shared with anyone else. \n\n" +
 			"Help us out make Unhinged become the best it can be!"
-		options = []discordgo.SelectMenuOption{
-			{
-				Label:       "Favourite conversation",
-				Value:       "favourite_conversations",
-				Description: "Favourite unedited conversations!",
-				Default:     false,
+		components = []discordgo.MessageComponent{
+			discordgo.SelectMenu{
+				CustomID:    Select,
+				Placeholder: "Make a selection",
+				Options: []discordgo.SelectMenuOption{
+					{
+						Label:       "Favourite conversation",
+						Value:       "favourite_conversations",
+						Description: "Favourite unedited conversations!",
+						Default:     false,
+					},
+					{
+						Label:       "Immersion/Optimization",
+						Value:       "edited_conversations",
+						Description: "Conversations improved through the message editing feature",
+						Default:     false,
+					},
+				},
 			},
-			{
-				Label:       "Immersion/Optimization",
-				Value:       "edited_conversations",
-				Description: "Conversations improved through the message editing feature",
-				Default:     false,
+		}
+	case "mod":
+		title = "Apply to become a mini-mod here!\n"
+		description = "Simply press the button and the process will start!\n\n"
+		components = []discordgo.MessageComponent{
+			discordgo.Button{
+				Label:    "Apply here",
+				Style:    discordgo.PrimaryButton,
+				CustomID: MiniModSubmit,
 			},
 		}
 	default:
@@ -80,13 +97,7 @@ func generateApplicationMessage(variant string) *discordgo.MessageSend {
 		},
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.SelectMenu{
-						CustomID:    Select,
-						Placeholder: "Make a selection",
-						Options:     options,
-					},
-				},
+				Components: components,
 			},
 		},
 	}

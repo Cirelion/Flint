@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+var (
+	moderationQuestion1 = "Timezone and available hours in UTC"
+	moderationQuestion2 = "Experience with Discord moderation and tools"
+	moderationQuestion3 = "Experience with informing & handling disputes"
+	moderationQuestion4 = "How do you treat big vs minor rule violations"
+	moderationQuestion5 = "Why should you be selected as mini moderator?"
+)
+
 type Plugin struct{}
 
 func (p *Plugin) PluginInfo() *common.PluginInfo {
@@ -25,14 +33,12 @@ var logger = common.GetPluginLogger(&Plugin{})
 
 func RegisterPlugin() {
 	common.RegisterPlugin(&Plugin{})
-	//common.GORM.AutoMigrate(&Giveaway{})
 }
 
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
 	eventsystem.AddHandlerAsyncLastLegacy(p, bot.ConcurrentEventHandler(handleApplicationInteractionCreate), eventsystem.EventInteractionCreate)
-	//eventsystem.AddHandlerAsyncLastLegacy(p, bot.ConcurrentEventHandler(handleDMReply), eventsystem.EventMessageCreate)
 }
 
 func (p *Plugin) AddCommands() {
@@ -41,28 +47,22 @@ func (p *Plugin) AddCommands() {
 	)
 }
 
-//func handleDMReply(evt *eventsystem.EventData) {
-//	m := evt.MessageCreate()
-//	channel, err := common.BotSession.Channel(m.ChannelID)
-//	if err != nil || !(channel.Type == 1 || channel.Type == 3) {
-//		return
-//	}
-//
-//	err = bot.SendDM(m.Author.ID, "Test reply")
-//	if err != nil {
-//		return
-//	}
-//}
-
 func handleApplicationStart(evt *eventsystem.EventData) {
 	ic := evt.EvtInterface.(*discordgo.InteractionCreate)
 	data := ic.MessageComponentData()
 
-	switch data.Values[0] {
-	case "favourite_conversations":
-		startFavouriteConversationModal(ic, evt.Session, FavouriteConversationsID, "Favourite conversations")
-	case "edited_conversations":
-		startFavouriteConversationModal(ic, evt.Session, EditedFavouriteConversationsID, "Immersion/Optimization")
+	if len(data.Values) > 0 {
+		switch data.Values[0] {
+		case "favourite_conversations":
+			startFavouriteConversationModal(ic, evt.Session, FavouriteConversationsID, "Favourite conversations")
+		case "edited_conversations":
+			startFavouriteConversationModal(ic, evt.Session, EditedFavouriteConversationsID, "Immersion/Optimization")
+		}
+	} else {
+		switch data.CustomID {
+		case MiniModSubmit:
+			startMiniModModal(ic, evt.Session)
+		}
 	}
 }
 
@@ -140,9 +140,86 @@ func getLogChannel(config *moderation.Config, customID string) int64 {
 		return config.IntConversationSubmissionChannel()
 	}
 
+	if customID == "Mini mod submission" {
+		return config.IntModApplicationSubmissionChannel()
+	}
+
 	return 0
 }
 
+func startMiniModModal(ic *discordgo.InteractionCreate, session *discordgo.Session) {
+	params := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			CustomID: "Mini mod submission",
+			Title:    "Mini-mod application",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  moderationQuestion1,
+							Label:     "Timezone and available hours in UTC",
+							Style:     discordgo.TextInputShort,
+							Required:  true,
+							MaxLength: 1000,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  moderationQuestion2,
+							Label:     "Experience with Discord moderation and tools",
+							Style:     discordgo.TextInputParagraph,
+							Required:  true,
+							MaxLength: 1000,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  moderationQuestion3,
+							Label:     "Experience with informing & handling disputes",
+							Style:     discordgo.TextInputParagraph,
+							Required:  true,
+							MaxLength: 1000,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  moderationQuestion4,
+							Label:     "How do you treat big vs minor rule violations",
+							Style:     discordgo.TextInputParagraph,
+							Required:  true,
+							MaxLength: 1000,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  moderationQuestion5,
+							Label:     "Why should you be selected as mini moderator?",
+							Style:     discordgo.TextInputParagraph,
+							Required:  true,
+							MaxLength: 1000,
+						},
+					},
+				},
+			},
+			Flags: 64,
+		},
+	}
+
+	err := session.CreateInteractionResponse(ic.ID, ic.Token, params)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+}
 func startFavouriteConversationModal(ic *discordgo.InteractionCreate, session *discordgo.Session, customID string, title string) {
 	params := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
