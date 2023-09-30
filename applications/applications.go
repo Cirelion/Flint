@@ -14,6 +14,8 @@ var (
 	ConversationReason             = "Conversation reason"
 	Select                         = "application_select"
 	MiniModSubmit                  = "Mini mod submission"
+	MovieSuggestion                = "Movie suggestion"
+	MoveHostSubmit                 = "Host/stream application"
 	Apply                          = &commands.YAGCommand{
 		CmdCategory:               commands.CategoryTool,
 		Name:                      "PostApplicationEmbed",
@@ -25,7 +27,7 @@ var (
 		RequiredArgs:              1,
 		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
 		Arguments: []*dcmd.ArgDef{
-			{Name: "Variant", Help: "Type of application embed you want to post [conv|mod]", Type: dcmd.String},
+			{Name: "Variant", Help: "Type of application embed you want to post [conv|mod|event]", Type: dcmd.String},
 		},
 		IsResponseEphemeral: true,
 		RunFunc:             startApplication,
@@ -35,7 +37,7 @@ var (
 func startApplication(data *dcmd.Data) (interface{}, error) {
 	message := generateApplicationMessage(data.Args[0].Str())
 	if message == nil {
-		return "Incorrect variant set, possible variants are: [conv|mod]", nil
+		return "Incorrect variant set, possible variants are: [conv|mod|event]", nil
 	}
 
 	_, err := common.BotSession.ChannelMessageSendComplex(data.ChannelID, message)
@@ -77,9 +79,24 @@ func generateApplicationMessage(variant string) *discordgo.MessageSend {
 				},
 			},
 		}
+	case "event":
+		title = "Event forms"
+		description = "Suggest movies for movie nights or apply to host/stream for us!"
+		components = []discordgo.MessageComponent{
+			discordgo.Button{
+				Label:    "Suggest a movie",
+				Style:    discordgo.PrimaryButton,
+				CustomID: MovieSuggestion,
+			},
+			discordgo.Button{
+				Label:    "Sign up to host",
+				Style:    discordgo.SecondaryButton,
+				CustomID: MoveHostSubmit,
+			},
+		}
 	case "mod":
-		title = "Apply to become a mini-mod here!\n"
-		description = "Simply press the button and the process will start!\n\n"
+		title = "Apply to become a mini-mod here!"
+		description = "Simply press the button and the process will start!"
 		components = []discordgo.MessageComponent{
 			discordgo.Button{
 				Label:    "Apply here",

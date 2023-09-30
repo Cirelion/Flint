@@ -11,14 +11,6 @@ import (
 	"time"
 )
 
-var (
-	moderationQuestion1 = "Timezone and available hours in UTC"
-	moderationQuestion2 = "Experience with Discord moderation and tools"
-	moderationQuestion3 = "Experience with informing & handling disputes"
-	moderationQuestion4 = "How do you treat big vs minor rule violations"
-	moderationQuestion5 = "Why should you be selected as mini moderator?"
-)
-
 type Plugin struct{}
 
 func (p *Plugin) PluginInfo() *common.PluginInfo {
@@ -62,6 +54,10 @@ func handleApplicationStart(evt *eventsystem.EventData) {
 		switch data.CustomID {
 		case MiniModSubmit:
 			startMiniModModal(ic, evt.Session)
+		case MovieSuggestion:
+			startMovieSuggestionModal(ic, evt.Session)
+		case MoveHostSubmit:
+			startMovieHostModal(ic, evt.Session)
 		}
 	}
 }
@@ -124,7 +120,7 @@ func handleApplicationInteractionCreate(evt *eventsystem.EventData) {
 		}
 
 		_, err = common.BotSession.FollowupMessageCreate(&ic.Interaction, true, &discordgo.WebhookParams{
-			Content:         "Your application has been submitted successfully! Thanks for helping our models become the very best!",
+			Content:         "Your application has been submitted successfully!",
 			AllowedMentions: &discordgo.AllowedMentions{},
 			Flags:           64,
 		})
@@ -136,130 +132,14 @@ func handleApplicationInteractionCreate(evt *eventsystem.EventData) {
 }
 
 func getLogChannel(config *moderation.Config, customID string) int64 {
-	if customID == EditedFavouriteConversationsID || customID == FavouriteConversationsID {
+	switch true {
+	case customID == EditedFavouriteConversationsID || customID == FavouriteConversationsID:
 		return config.IntConversationSubmissionChannel()
-	}
-
-	if customID == "Mini mod submission" {
+	case customID == MiniModSubmit:
 		return config.IntModApplicationSubmissionChannel()
+	case customID == MovieSuggestion || customID == MoveHostSubmit:
+		return config.IntEventSubmissionChannel()
 	}
 
 	return 0
-}
-
-func startMiniModModal(ic *discordgo.InteractionCreate, session *discordgo.Session) {
-	params := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
-		Data: &discordgo.InteractionResponseData{
-			CustomID: "Mini mod submission",
-			Title:    "Mini-mod application",
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  moderationQuestion1,
-							Label:     "Timezone and available hours in UTC",
-							Style:     discordgo.TextInputShort,
-							Required:  true,
-							MaxLength: 1000,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  moderationQuestion2,
-							Label:     "Experience with Discord moderation and tools",
-							Style:     discordgo.TextInputParagraph,
-							Required:  true,
-							MaxLength: 1000,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  moderationQuestion3,
-							Label:     "Experience with informing & handling disputes",
-							Style:     discordgo.TextInputParagraph,
-							Required:  true,
-							MaxLength: 1000,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  moderationQuestion4,
-							Label:     "How do you treat big vs minor rule violations",
-							Style:     discordgo.TextInputParagraph,
-							Required:  true,
-							MaxLength: 1000,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  moderationQuestion5,
-							Label:     "Why should you be selected as mini moderator?",
-							Style:     discordgo.TextInputParagraph,
-							Required:  true,
-							MaxLength: 1000,
-						},
-					},
-				},
-			},
-			Flags: 64,
-		},
-	}
-
-	err := session.CreateInteractionResponse(ic.ID, ic.Token, params)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-}
-func startFavouriteConversationModal(ic *discordgo.InteractionCreate, session *discordgo.Session, customID string, title string) {
-	params := &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseModal,
-		Data: &discordgo.InteractionResponseData{
-			CustomID: customID,
-			Title:    title,
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    ConversationLink,
-							Label:       "The link to the conversation",
-							Style:       discordgo.TextInputShort,
-							Required:    true,
-							MinLength:   40,
-							MaxLength:   100,
-							Placeholder: "https://wwww.unhinged.ai/chat?conversationId=65185e2870555d99bd092765",
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    ConversationReason,
-							Label:       "What makes this conversation good?",
-							Style:       discordgo.TextInputParagraph,
-							Required:    false,
-							MaxLength:   500,
-							Placeholder: "The bot stays in character very well and writes coherent and original answers.",
-						},
-					},
-				},
-			},
-			Flags: 64,
-		},
-	}
-
-	err := session.CreateInteractionResponse(ic.ID, ic.Token, params)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
 }
