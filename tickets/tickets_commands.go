@@ -613,7 +613,7 @@ OUTER2:
 		return 0, nil, err
 	}
 
-	channel, err := common.BotSession.GuildChannelCreateWithOverwrites(gs.ID, fmt.Sprintf("ticket-%d", id), discordgo.ChannelTypeGuildText, conf.TicketsChannelCategory, overwrites)
+	channel, err := common.BotSession.GuildChannelCreateWithOverwrites(gs.ID, fmt.Sprintf("ticket-%04d", id), discordgo.ChannelTypeGuildText, conf.TicketsChannelCategory, overwrites)
 	if err != nil {
 		return 0, nil, err
 	}
