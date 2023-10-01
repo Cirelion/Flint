@@ -20,6 +20,11 @@ func (p *Plugin) PluginInfo() *common.PluginInfo {
 	}
 }
 
+var (
+	TicketModal    = "ticket_modal"
+	TicketSubject  = "ticket_subject"
+	TicketQuestion = "ticket_reason"
+)
 var logger = common.GetPluginLogger(&Plugin{})
 
 func RegisterPlugin() {
@@ -47,5 +52,46 @@ func TicketLog(conf *models.TicketConfig, guildID int64, author *discordgo.User,
 	_, err := common.BotSession.ChannelMessageSendEmbed(conf.StatusChannel, embed)
 	if err != nil {
 		logger.WithError(err).WithField("guild", guildID).Error("[tickets] failed sending log message to guild")
+	}
+}
+
+func startTicketModal(ic *discordgo.InteractionCreate, session *discordgo.Session) {
+	params := &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			CustomID: TicketModal,
+			Title:    "Contact staff",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    TicketSubject,
+							Label:       "What is the subject of your question/request?",
+							Style:       discordgo.TextInputShort,
+							Required:    true,
+							Placeholder: "Bot clarification",
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:    TicketQuestion,
+							Label:       "What is your question/request?",
+							Style:       discordgo.TextInputParagraph,
+							Required:    true,
+							Placeholder: "I want to make sure that my bot isn't breaking the rules before I publicize",
+						},
+					},
+				},
+			},
+			Flags: 64,
+		},
+	}
+
+	err := session.CreateInteractionResponse(ic.ID, ic.Token, params)
+	if err != nil {
+		logger.Error(err)
+		return
 	}
 }

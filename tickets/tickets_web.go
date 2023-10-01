@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"html/template"
 	"net/http"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/cirelion/flint/common/cplogs"
 	"github.com/cirelion/flint/tickets/models"
 	"github.com/cirelion/flint/web"
-	"github.com/volatiletech/sqlboiler/boil"
 	"goji.io/pat"
 )
 

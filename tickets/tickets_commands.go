@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"io"
 	"net/http"
 	"sync"
@@ -20,8 +21,7 @@ import (
 	"github.com/cirelion/flint/lib/dstate"
 	"github.com/cirelion/flint/tickets/models"
 	"github.com/cirelion/flint/web"
-	"github.com/volatiletech/sqlboiler/boil"
-	"github.com/volatiletech/sqlboiler/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 const InTicketPerms = discordgo.PermissionReadMessageHistory | discordgo.PermissionReadMessages | discordgo.PermissionSendMessages | discordgo.PermissionEmbedLinks | discordgo.PermissionAttachFiles
@@ -39,38 +39,6 @@ func (p *Plugin) AddCommands() {
 		Description: "Ticket commands",
 		HelpEmoji:   "🎫",
 		EmbedColor:  0x42b9f4,
-	}
-
-	cmdOpenTicket := &commands.YAGCommand{
-		CmdCategory:  categoryTickets,
-		Name:         "Open",
-		Aliases:      []string{"create", "new", "make"},
-		Description:  "Opens a new ticket",
-		RequiredArgs: 1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "subject", Type: dcmd.String},
-		},
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			conf := parsed.Context().Value(CtxKeyConfig).(*models.TicketConfig)
-			if !conf.Enabled {
-				return createTicketsDisabledError(parsed.GuildData), nil
-			}
-
-			_, ticket, err := CreateTicket(parsed.Context(), parsed.GuildData.GS, parsed.GuildData.MS, conf, parsed.Args[0].Str(), true)
-			if err != nil {
-				switch t := err.(type) {
-				case TicketUserError:
-					return string(t), nil
-				case *TicketUserError:
-					return string(*t), nil
-				}
-
-				return nil, err
-			}
-
-			// Annn done setting up the ticket
-			return fmt.Sprintf("Ticket #%d opened in <#%d>", ticket.LocalID, ticket.ChannelID), nil
-		},
 	}
 
 	cmdAddParticipant := &commands.YAGCommand{
@@ -107,81 +75,45 @@ func (p *Plugin) AddCommands() {
 		},
 	}
 
-	cmdRemoveParticipant := &commands.YAGCommand{
-		CmdCategory:  categoryTickets,
-		Name:         "RemoveUser",
-		Description:  "Removes a user from the ticket",
-		RequiredArgs: 1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "target", Type: &commands.MemberArg{}},
-		},
-
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			target := parsed.Args[0].Value.(*dstate.MemberState)
-
-			currentTicket := parsed.Context().Value(CtxKeyCurrentTicket).(*Ticket)
-
-			foundUser := false
-
-		OUTER:
-			for _, v := range parsed.GuildData.CS.PermissionOverwrites {
-				if v.Type == discordgo.PermissionOverwriteTypeMember && v.ID == target.User.ID {
-					if (v.Allow & InTicketPerms) == InTicketPerms {
-						foundUser = true
-					}
-
-					break OUTER
-				}
-			}
-
-			if !foundUser {
-				return fmt.Sprintf("%s is already not (explicitly) part of this ticket", target.User.String()), nil
-			}
-
-			err := common.BotSession.ChannelPermissionDelete(currentTicket.Ticket.ChannelID, target.User.ID)
-			if err != nil {
-				return nil, err
-			}
-
-			return fmt.Sprintf("Removed %s from the ticket", target.User.String()), nil
-		},
-	}
-
-	cmdRenameTicket := &commands.YAGCommand{
-		CmdCategory:  categoryTickets,
-		Name:         "Rename",
-		Description:  "Renames the ticket",
-		RequiredArgs: 1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "new-name", Type: dcmd.String},
-		},
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			currentTicket := parsed.Context().Value(CtxKeyCurrentTicket).(*Ticket)
-
-			newName := parsed.Args[0].Str()
-
-			oldName := currentTicket.Ticket.Title
-			currentTicket.Ticket.Title = newName
-			_, err := currentTicket.Ticket.UpdateG(parsed.Context(), boil.Whitelist("title"))
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = common.BotSession.ChannelEdit(currentTicket.Ticket.ChannelID, fmt.Sprintf("#%d-%s", currentTicket.Ticket.LocalID, newName))
-			if err != nil {
-				return nil, err
-			}
-
-			conf := parsed.Context().Value(CtxKeyConfig).(*models.TicketConfig)
-			TicketLog(conf, parsed.GuildData.GS.ID, parsed.Author, &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Ticket #%d renamed", currentTicket.Ticket.LocalID),
-				Description: fmt.Sprintf("From '%s' to '%s'", oldName, newName),
-				Color:       0x5394fc,
-			})
-
-			return "Renamed ticket to " + newName, nil
-		},
-	}
+	//cmdRemoveParticipant := &commands.YAGCommand{
+	//	CmdCategory:  categoryTickets,
+	//	Name:         "RemoveUser",
+	//	Description:  "Removes a user from the ticket",
+	//	RequiredArgs: 1,
+	//	Arguments: []*dcmd.ArgDef{
+	//		{Name: "target", Type: &commands.MemberArg{}},
+	//	},
+	//
+	//	RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+	//		target := parsed.Args[0].Value.(*dstate.MemberState)
+	//
+	//		currentTicket := parsed.Context().Value(CtxKeyCurrentTicket).(*Ticket)
+	//
+	//		foundUser := false
+	//
+	//	OUTER:
+	//		for _, v := range parsed.GuildData.CS.PermissionOverwrites {
+	//			if v.Type == discordgo.PermissionOverwriteTypeMember && v.ID == target.User.ID {
+	//				if (v.Allow & InTicketPerms) == InTicketPerms {
+	//					foundUser = true
+	//				}
+	//
+	//				break OUTER
+	//			}
+	//		}
+	//
+	//		if !foundUser {
+	//			return fmt.Sprintf("%s is already not (explicitly) part of this ticket", target.User.String()), nil
+	//		}
+	//
+	//		err := common.BotSession.ChannelPermissionDelete(currentTicket.Ticket.ChannelID, target.User.ID)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		return fmt.Sprintf("Removed %s from the ticket", target.User.String()), nil
+	//	},
+	//}
 
 	closingTickets := make(map[int64]bool)
 	var closingTicketsLock sync.Mutex
@@ -191,14 +123,11 @@ func (p *Plugin) AddCommands() {
 		Name:        "Close",
 		Aliases:     []string{"end", "delete"},
 		Description: "Closes the ticket",
-		Arguments: []*dcmd.ArgDef{
-			{Name: "reason", Type: dcmd.String, Default: "none"},
-		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			conf := parsed.Context().Value(CtxKeyConfig).(*models.TicketConfig)
 			currentTicket := parsed.Context().Value(CtxKeyCurrentTicket).(*Ticket)
 
-			// protect again'st calling close multiple times at the sime time
+			// protect against calling close multiple times at the same time
 			closingTicketsLock.Lock()
 			if _, ok := closingTickets[currentTicket.Ticket.ChannelID]; ok {
 				closingTicketsLock.Unlock()
@@ -221,16 +150,14 @@ func (p *Plugin) AddCommands() {
 			isAdminsOnly := ticketIsAdminOnly(conf, parsed.GuildData.CS)
 
 			// create the logs, download the attachments
-			err := createLogs(parsed.GuildData.GS, conf, currentTicket.Ticket, isAdminsOnly)
+			err := createLogs(parsed.GuildData.GS, conf, currentTicket.Ticket, isAdminsOnly, &discordgo.MessageEmbed{
+				Title:       fmt.Sprintf("Ticket #%d - '%s' closed", currentTicket.Ticket.LocalID, currentTicket.Ticket.Title),
+				Description: fmt.Sprintf("Author: %s", currentTicket.Ticket.AuthorUsernameDiscrim),
+				Color:       0xf23c3c,
+			})
 			if err != nil {
 				return nil, err
 			}
-
-			TicketLog(conf, parsed.GuildData.GS.ID, parsed.Author, &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("Ticket #%d - '%s' closed", currentTicket.Ticket.LocalID, currentTicket.Ticket.Title),
-				Description: fmt.Sprintf("Reason: %s", parsed.Args[0].Str()),
-				Color:       0xf23c3c,
-			})
 
 			// if everything went well, delete the channel
 			_, err = common.BotSession.ChannelDelete(currentTicket.Ticket.ChannelID)
@@ -247,81 +174,81 @@ func (p *Plugin) AddCommands() {
 		},
 	}
 
-	cmdAdminsOnly := &commands.YAGCommand{
-		CmdCategory: categoryTickets,
-		Name:        "AdminsOnly",
-		Aliases:     []string{"adminonly", "ao"},
-		Description: "Toggle admins only mode for this ticket",
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-
-			conf := parsed.Context().Value(CtxKeyConfig).(*models.TicketConfig)
-
-			isAdminsOnlyCurrently := true
-
-			modOverwrites := make([]discordgo.PermissionOverwrite, 0)
-
-			for _, ow := range parsed.GuildData.CS.PermissionOverwrites {
-				if ow.Type == discordgo.PermissionOverwriteTypeRole && common.ContainsInt64Slice(conf.ModRoles, ow.ID) {
-					if (ow.Allow & InTicketPerms) == InTicketPerms {
-						// one of the mod roles has ticket perms, this is not a admin ticket currently
-						isAdminsOnlyCurrently = false
-					}
-
-					modOverwrites = append(modOverwrites, ow)
-				}
-			}
-
-			// update existing overwrites
-			for _, v := range modOverwrites {
-				var err error
-				if isAdminsOnlyCurrently {
-					// add back the mods to this ticket
-					if (v.Allow & InTicketPerms) != InTicketPerms {
-						// add it back to allows, remove from denies
-						newAllows := v.Allow | InTicketPerms
-						newDenies := v.Deny & (^InTicketPerms)
-						err = common.BotSession.ChannelPermissionSet(parsed.ChannelID, v.ID, discordgo.PermissionOverwriteTypeRole, newAllows, newDenies)
-					}
-				} else {
-					// remove the mods from this ticket
-					if (v.Allow & InTicketPerms) == InTicketPerms {
-						// remove it from allows
-						newAllows := v.Allow & (^InTicketPerms)
-						err = common.BotSession.ChannelPermissionSet(parsed.ChannelID, v.ID, discordgo.PermissionOverwriteTypeRole, newAllows, v.Deny)
-					}
-				}
-
-				if err != nil {
-					logger.WithError(err).WithField("guild", parsed.GuildData.GS.ID).Error("[tickets] failed to update channel overwrite")
-				}
-			}
-
-			if isAdminsOnlyCurrently {
-				// add the missing overwrites for the missing roles
-			OUTER:
-				for _, v := range conf.ModRoles {
-					for _, ow := range modOverwrites {
-						if ow.ID == v {
-							// already handled above
-							continue OUTER
-						}
-					}
-
-					// need to create a new overwrite
-					err := common.BotSession.ChannelPermissionSet(parsed.ChannelID, v, discordgo.PermissionOverwriteTypeRole, InTicketPerms, 0)
-					if err != nil {
-						logger.WithError(err).WithField("guild", parsed.GuildData.GS.ID).Error("[tickets] failed to create channel overwrite")
-					}
-				}
-			}
-
-			if isAdminsOnlyCurrently {
-				return "Added back mods to the ticket", nil
-			}
-
-			return "Removed mods from this ticket", nil
-		},
-	}
+	//cmdAdminsOnly := &commands.YAGCommand{
+	//	CmdCategory: categoryTickets,
+	//	Name:        "AdminsOnly",
+	//	Aliases:     []string{"adminonly", "ao"},
+	//	Description: "Toggle admins only mode for this ticket",
+	//	RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+	//
+	//		conf := parsed.Context().Value(CtxKeyConfig).(*models.TicketConfig)
+	//
+	//		isAdminsOnlyCurrently := true
+	//
+	//		modOverwrites := make([]discordgo.PermissionOverwrite, 0)
+	//
+	//		for _, ow := range parsed.GuildData.CS.PermissionOverwrites {
+	//			if ow.Type == discordgo.PermissionOverwriteTypeRole && common.ContainsInt64Slice(conf.ModRoles, ow.ID) {
+	//				if (ow.Allow & InTicketPerms) == InTicketPerms {
+	//					// one of the mod roles has ticket perms, this is not a admin ticket currently
+	//					isAdminsOnlyCurrently = false
+	//				}
+	//
+	//				modOverwrites = append(modOverwrites, ow)
+	//			}
+	//		}
+	//
+	//		// update existing overwrites
+	//		for _, v := range modOverwrites {
+	//			var err error
+	//			if isAdminsOnlyCurrently {
+	//				// add back the mods to this ticket
+	//				if (v.Allow & InTicketPerms) != InTicketPerms {
+	//					// add it back to allows, remove from denies
+	//					newAllows := v.Allow | InTicketPerms
+	//					newDenies := v.Deny & (^InTicketPerms)
+	//					err = common.BotSession.ChannelPermissionSet(parsed.ChannelID, v.ID, discordgo.PermissionOverwriteTypeRole, newAllows, newDenies)
+	//				}
+	//			} else {
+	//				// remove the mods from this ticket
+	//				if (v.Allow & InTicketPerms) == InTicketPerms {
+	//					// remove it from allows
+	//					newAllows := v.Allow & (^InTicketPerms)
+	//					err = common.BotSession.ChannelPermissionSet(parsed.ChannelID, v.ID, discordgo.PermissionOverwriteTypeRole, newAllows, v.Deny)
+	//				}
+	//			}
+	//
+	//			if err != nil {
+	//				logger.WithError(err).WithField("guild", parsed.GuildData.GS.ID).Error("[tickets] failed to update channel overwrite")
+	//			}
+	//		}
+	//
+	//		if isAdminsOnlyCurrently {
+	//			// add the missing overwrites for the missing roles
+	//		OUTER:
+	//			for _, v := range conf.ModRoles {
+	//				for _, ow := range modOverwrites {
+	//					if ow.ID == v {
+	//						// already handled above
+	//						continue OUTER
+	//					}
+	//				}
+	//
+	//				// need to create a new overwrite
+	//				err := common.BotSession.ChannelPermissionSet(parsed.ChannelID, v, discordgo.PermissionOverwriteTypeRole, InTicketPerms, 0)
+	//				if err != nil {
+	//					logger.WithError(err).WithField("guild", parsed.GuildData.GS.ID).Error("[tickets] failed to create channel overwrite")
+	//				}
+	//			}
+	//		}
+	//
+	//		if isAdminsOnlyCurrently {
+	//			return "Added back mods to the ticket", nil
+	//		}
+	//
+	//		return "Removed mods from this ticket", nil
+	//	},
+	//}
 
 	container, _ := commands.CommandSystem.Root.Sub("tickets", "ticket")
 	container.Description = "Command to manage the ticket system"
@@ -367,12 +294,10 @@ func (p *Plugin) AddCommands() {
 			}
 		})
 
-	container.AddCommand(cmdOpenTicket, cmdOpenTicket.GetTrigger())
 	container.AddCommand(cmdAddParticipant, cmdAddParticipant.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
-	container.AddCommand(cmdRemoveParticipant, cmdRemoveParticipant.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
-	container.AddCommand(cmdRenameTicket, cmdRenameTicket.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
+	//container.AddCommand(cmdRemoveParticipant, cmdRemoveParticipant.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
 	container.AddCommand(cmdCloseTicket, cmdCloseTicket.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
-	container.AddCommand(cmdAdminsOnly, cmdAdminsOnly.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
+	//container.AddCommand(cmdAdminsOnly, cmdAdminsOnly.GetTrigger().SetMiddlewares(RequireActiveTicketMW))
 
 	commands.RegisterSlashCommandsContainer(container, false, TicketCommandsRolesRunFuncfunc)
 }
@@ -417,7 +342,7 @@ type Ticket struct {
 	Participants []*models.TicketParticipant
 }
 
-func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.Ticket, adminOnly bool) error {
+func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.Ticket, adminOnly bool, embed *discordgo.MessageEmbed) error {
 
 	if !conf.TicketsUseTXTTranscripts && !conf.DownloadAttachments {
 		return nil // nothing to do here
@@ -441,7 +366,7 @@ func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.T
 			// download attachments
 		OUTER:
 			for _, att := range msg.Attachments {
-				msg.Content += fmt.Sprintf("(attatchment: %s)", att.Filename)
+				msg.Content += fmt.Sprintf("(attachment: %s)", att.Filename)
 
 				totalAttachmentSize += att.Size
 				if totalAttachmentSize > 500000000 {
@@ -491,7 +416,10 @@ func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.T
 		formattedTranscript := createTXTTranscript(ticket, msgs)
 
 		channel := transcriptChannel(conf, adminOnly)
-		_, err := common.BotSession.ChannelFileSendWithMessage(channel, fmt.Sprintf("transcript-%d-%s.txt", ticket.LocalID, ticket.Title), fmt.Sprintf("transcript-%d-%s.txt", ticket.LocalID, ticket.Title), formattedTranscript)
+		_, err := common.BotSession.ChannelMessageSendComplex(channel, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Files:  []*discordgo.File{{Name: fmt.Sprintf("transcript-%d-%s.txt", ticket.LocalID, ticket.Title), Reader: formattedTranscript}},
+		})
 		if err != nil {
 			return err
 		}
@@ -623,7 +551,7 @@ func transcriptChannel(conf *models.TicketConfig, adminOnly bool) int64 {
 	return conf.TicketsTranscriptsChannel
 }
 
-func createTicketChannel(conf *models.TicketConfig, gs *dstate.GuildSet, authorID int64, subject string) (int64, *discordgo.Channel, error) {
+func createTicketChannel(conf *models.TicketConfig, gs *dstate.GuildSet, authorID int64) (int64, *discordgo.Channel, error) {
 	// assemble the permission overwrites for the channel were about to create
 	overwrites := []*discordgo.PermissionOverwrite{
 		{
@@ -679,37 +607,18 @@ OUTER2:
 		})
 	}
 
-	// inherit settings from category
-	// TODO: disabled because of a issue with discord recently pushed change that disallows bots from creating channels with permissions they don't have
-	// TODO: automatically filter those out
-	// overwrites = applyChannelParentSettings(gs, conf.TicketsChannelCategory, overwrites)
-
 	// generate the ID for this ticket
 	id, err := common.GenLocalIncrID(gs.ID, "ticket")
 	if err != nil {
 		return 0, nil, err
 	}
 
-	channel, err := common.BotSession.GuildChannelCreateWithOverwrites(gs.ID, fmt.Sprintf("%d-%s", id, subject), discordgo.ChannelTypeGuildText, conf.TicketsChannelCategory, overwrites)
+	channel, err := common.BotSession.GuildChannelCreateWithOverwrites(gs.ID, fmt.Sprintf("ticket-%d", id), discordgo.ChannelTypeGuildText, conf.TicketsChannelCategory, overwrites)
 	if err != nil {
 		return 0, nil, err
 	}
 
 	return id, channel, nil
-}
-
-func applyChannelParentSettings(gs *dstate.GuildSet, parentCategoryID int64, overwrites []*discordgo.PermissionOverwrite) []*discordgo.PermissionOverwrite {
-	cs := gs.GetChannel(parentCategoryID)
-	if cs == nil {
-		return overwrites
-	}
-
-	channel_overwrites := make([]*discordgo.PermissionOverwrite, len(cs.PermissionOverwrites))
-	for i := 0; i < len(overwrites); i++ {
-		channel_overwrites[i] = &cs.PermissionOverwrites[i]
-	}
-
-	return applyChannelParentSettingsOverwrites(channel_overwrites, overwrites)
 }
 
 func applyChannelParentSettingsOverwrites(parentOverwrites []*discordgo.PermissionOverwrite, newChannelOverwrites []*discordgo.PermissionOverwrite) []*discordgo.PermissionOverwrite {

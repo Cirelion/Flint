@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/volatiletech/null/v8"
 	"strconv"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/cirelion/flint/lib/dstate"
 	"github.com/cirelion/flint/tickets/models"
-	"github.com/volatiletech/null"
 )
 
 func init() {
@@ -24,7 +24,7 @@ func init() {
 // tmplRunCC either run another custom command immeditely with a max stack depth of 2
 // or schedules a custom command to be run in the future sometime with the provided data placed in .ExecData
 func tmplCreateTicket(ctx *templates.Context) interface{} {
-	return func(author interface{}, topic string) (*TemplateTicket, error) {
+	return func(author interface{}, topic string, question string) (*TemplateTicket, error) {
 		if ctx.IncreaseCheckCallCounterPremium("ticket", 1, 1) {
 			return nil, templates.ErrTooManyCalls
 		}
@@ -80,7 +80,7 @@ func tmplCreateTicket(ctx *templates.Context) interface{} {
 			return nil, errors.New("tickets are disabled on this server")
 		}
 
-		gs, ticket, err := CreateTicket(context.Background(), ctx.GS, ms, conf, topic, true)
+		gs, ticket, err := CreateTicket(context.Background(), ctx.GS, ms, conf, topic, question, true)
 		ctx.GS = gs
 
 		if err != nil {
@@ -98,6 +98,7 @@ func tmplCreateTicket(ctx *templates.Context) interface{} {
 			LocalID:               ticket.LocalID,
 			ChannelID:             ticket.ChannelID,
 			Title:                 ticket.Title,
+			Question:              ticket.Question,
 			CreatedAt:             ticket.CreatedAt,
 			ClosedAt:              ticket.ClosedAt,
 			LogsID:                ticket.LogsID,
@@ -112,6 +113,7 @@ type TemplateTicket struct {
 	LocalID               int64
 	ChannelID             int64
 	Title                 string
+	Question              string
 	CreatedAt             time.Time
 	ClosedAt              null.Time
 	LogsID                int64

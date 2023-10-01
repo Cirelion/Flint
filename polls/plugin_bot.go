@@ -62,35 +62,37 @@ func handleInteractionCreate(evt *eventsystem.EventData) {
 
 	customID := ic.MessageComponentData().CustomID
 
-	var vote []string
-	var err error
+	if customID == pollNay || customID == pollYay || customID == strawPollSelect {
+		var vote []string
+		var err error
 
-	poll := &PollMessage{
-		MessageID: ic.Message.ID,
-	}
-	err = common.GORM.Model(&poll).First(&poll).Error
-
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	switch customID {
-	case pollYay:
-		vote = append(vote, "0")
-		handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
-	case pollNay:
-		vote = append(vote, "1")
-		handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
-	case strawPollSelect:
-		var votes []string
-		values := ic.Data.(discordgo.MessageComponentInteractionData).Values
-
-		for _, value := range values {
-			votes = append(votes, value)
+		poll := &PollMessage{
+			MessageID: ic.Message.ID,
 		}
-		vote = append(vote, votes...)
-		handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+		err = common.GORM.Model(&poll).First(&poll).Error
+
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		switch customID {
+		case pollYay:
+			vote = append(vote, "0")
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+		case pollNay:
+			vote = append(vote, "1")
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+		case strawPollSelect:
+			var votes []string
+			values := ic.Data.(discordgo.MessageComponentInteractionData).Values
+
+			for _, value := range values {
+				votes = append(votes, value)
+			}
+			vote = append(vote, votes...)
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+		}
 	}
 }
 

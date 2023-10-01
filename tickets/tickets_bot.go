@@ -2,28 +2,90 @@ package tickets
 
 import (
 	"context"
-	"fmt"
-	"time"
-	"unicode/utf8"
-
 	"emperror.dev/errors"
+	"fmt"
+	"github.com/cirelion/flint/applications"
 	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/bot/botrest"
 	"github.com/cirelion/flint/bot/eventsystem"
 	"github.com/cirelion/flint/common"
-	"github.com/cirelion/flint/common/templates"
 	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/cirelion/flint/lib/dstate"
 	"github.com/cirelion/flint/tickets/models"
-	"github.com/volatiletech/sqlboiler/boil"
-	"github.com/volatiletech/sqlboiler/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"time"
 )
 
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
 	eventsystem.AddHandlerAsyncLast(p, p.handleChannelRemoved, eventsystem.EventChannelDelete)
+	eventsystem.AddHandlerAsyncLastLegacy(p, p.handleInteractionCreate, eventsystem.EventInteractionCreate)
 }
 
+func (p *Plugin) handleInteractionCreate(evt *eventsystem.EventData) {
+	ic := evt.InteractionCreate()
+	if ic.GuildID == 0 {
+		//DM interactions are handled via pubsub
+		return
+	}
+
+	if ic.Type == discordgo.InteractionMessageComponent {
+		customID := ic.MessageComponentData().CustomID
+		if customID == applications.TicketSubmit {
+			startTicketModal(ic, evt.Session)
+		}
+		return
+	}
+	if ic.Type != discordgo.InteractionModalSubmit {
+		// Not a modal interaction
+		return
+	}
+
+	if ic.DataCommand == nil && ic.DataModal == nil {
+		// Modal interaction had no data
+		return
+	}
+
+	if ic.Type == discordgo.InteractionModalSubmit && ic.DataModal.CustomID == TicketModal {
+		subject := ic.DataModal.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput)
+		question := ic.DataModal.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput)
+
+		config, err := models.FindTicketConfig(evt.Context(), boil.GetContextDB(), ic.GuildID)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		ms, err := bot.GetMember(ic.GuildID, ic.Member.User.ID)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		guild, err := botrest.GetGuild(ic.GuildID)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		_, ticket, err := CreateTicket(evt.Context(), guild, ms, config, subject.Value, question.Value, true)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		err = common.BotSession.CreateInteractionResponse(ic.ID, ic.Token, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: fmt.Sprintf("Support ticket opened successfully! Click [here](https://discord.com/channels/%d/%d) to go to your ticket.", ticket.GuildID, ticket.ChannelID), Flags: 64},
+		})
+		if err != nil {
+			logger.WithError(err).Error("Failed sending ticket confirm message")
+			return
+		}
+	}
+}
 func (p *Plugin) handleChannelRemoved(evt *eventsystem.EventData) (retry bool, err error) {
 	del := evt.ChannelDelete()
 
@@ -46,11 +108,10 @@ func (t TicketUserError) Error() string {
 
 const (
 	ErrNoTicketCateogry TicketUserError = "No category for ticket channels set"
-	ErrTitleTooLong     TicketUserError = "Title is too long (max 90 characters.) Please shorten it down, you can add more details in the ticket after it has been created"
-	ErrMaxOpenTickets   TicketUserError = "You're currently in over 10 open tickets on this server, please close some of the ones you're in."
+	ErrMaxOpenTickets   TicketUserError = "You're currently in over 3 open tickets on this server, please close some of the ones you're in."
 )
 
-func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberState, conf *models.TicketConfig, topic string, checkMaxTickets bool) (*dstate.GuildSet, *models.Ticket, error) {
+func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberState, conf *models.TicketConfig, topic string, question string, checkMaxTickets bool) (*dstate.GuildSet, *models.Ticket, error) {
 	if gs.GetChannel(conf.TicketsChannelCategory) == nil {
 		return gs, nil, ErrNoTicketCateogry
 	}
@@ -75,13 +136,9 @@ func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberSta
 			}
 		}
 
-		if count >= 10 {
+		if count >= 3 {
 			return gs, nil, ErrMaxOpenTickets
 		}
-	}
-
-	if utf8.RuneCountInString(topic) > 90 {
-		return gs, nil, ErrTitleTooLong
 	}
 
 	// we manually insert the channel into gs for reliability
@@ -89,7 +146,7 @@ func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberSta
 	gsCop.Channels = make([]dstate.ChannelState, len(gs.Channels), len(gs.Channels)+1)
 	copy(gsCop.Channels, gs.Channels)
 
-	id, channel, err := createTicketChannel(conf, gs, ms.User.ID, topic)
+	id, channel, err := createTicketChannel(conf, gs, ms.User.ID)
 	if err != nil {
 		return gs, nil, err
 	}
@@ -100,6 +157,7 @@ func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberSta
 		LocalID:               id,
 		ChannelID:             channel.ID,
 		Title:                 topic,
+		Question:              question,
 		CreatedAt:             time.Now(),
 		AuthorID:              ms.User.ID,
 		AuthorUsernameDiscrim: ms.User.String(),
@@ -111,34 +169,23 @@ func CreateTicket(ctx context.Context, gs *dstate.GuildSet, ms *dstate.MemberSta
 	}
 
 	// send the first ticket message
-
 	cs := dstate.ChannelStateFromDgo(channel)
 
-	// insert the channel into gs, TODO: Should we sort?
+	// insert the channel into gs
 	gs = &gsCop
 	gs.Channels = append(gs.Channels, cs)
 
-	tmplCTX := templates.NewContext(gs, &cs, ms)
-	tmplCTX.Name = "ticket open message"
-	tmplCTX.Data["Reason"] = topic
-	ticketOpenMsg := conf.TicketOpenMSG
-	if ticketOpenMsg == "" {
-		ticketOpenMsg = DefaultTicketMsg
-	}
+	_, err = common.BotSession.ChannelMessageSendComplex(channel.ID, &discordgo.MessageSend{
+		Content: fmt.Sprintf("Hello %s! A moderator will respond to your inquiry shortly!", ms.User.Mention()),
+		Embeds: []*discordgo.MessageEmbed{{
+			Title:       topic,
+			Description: question,
+		}},
+	})
 
-	err = tmplCTX.ExecuteAndSendWithErrors(ticketOpenMsg, channel.ID)
 	if err != nil {
 		logger.WithError(err).WithField("guild", gs.ID).Error("failed sending ticket open message")
 	}
 
-	// send the log message
-	TicketLog(conf, gs.ID, &ms.User, &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("Ticket #%d opened", id),
-		Description: fmt.Sprintf("Subject: %s", topic),
-		Color:       0x5df948,
-	})
-
-	// Annn done setting up the ticket
-	// return fmt.Sprintf("Ticket #%d opened in <#%d>", id, channel.ID), nil
 	return gs, dbModel, nil
 }

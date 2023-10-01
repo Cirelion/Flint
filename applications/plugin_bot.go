@@ -81,7 +81,7 @@ func handleApplicationInteractionCreate(evt *eventsystem.EventData) {
 		return
 	}
 
-	if ic.Type == discordgo.InteractionModalSubmit {
+	if ic.Type == discordgo.InteractionModalSubmit && ic.DataModal.CustomID != "ticket_modal" {
 		embed := &discordgo.MessageEmbed{
 			Title:       ic.DataModal.CustomID,
 			Description: fmt.Sprintf("Application from %s received", ic.Member.User.Mention()),
