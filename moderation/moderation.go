@@ -2,10 +2,10 @@ package moderation
 
 import (
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/configstore"
-	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/configstore"
+	"github.com/cirelion/flint/common/featureflags"
+	"github.com/cirelion/flint/lib/discordgo"
 	"golang.org/x/net/context"
 )
 

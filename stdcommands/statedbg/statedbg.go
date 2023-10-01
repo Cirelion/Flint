@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/util"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/stdcommands/util"
 )
 
 func Commands() *dcmd.Container {
@@ -61,7 +61,7 @@ var getMember = &commands.YAGCommand{
 	},
 	RequiredArgs: 1,
 	HideFromHelp: true,
-	RunFunc:     util.RequireOwner(cmdFuncGetMember),
+	RunFunc:      util.RequireOwner(cmdFuncGetMember),
 }
 
 func cmdFuncGetMember(data *dcmd.Data) (interface{}, error) {

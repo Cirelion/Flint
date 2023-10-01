@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/antiphishing"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
-	"github.com/botlabs-gg/yagpdb/v2/safebrowsing"
+	"github.com/cirelion/flint/antiphishing"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
+	"github.com/cirelion/flint/safebrowsing"
 	"github.com/mediocregopher/radix/v3"
 )
 

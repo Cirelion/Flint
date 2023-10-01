@@ -8,17 +8,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator/orchestrator"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator/orchestrator/rest"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/dshardorchestrator"
+	"github.com/cirelion/flint/lib/dshardorchestrator/orchestrator"
+	"github.com/cirelion/flint/lib/dshardorchestrator/orchestrator/rest"
 	"github.com/mediocregopher/radix/v3"
 	"github.com/sirupsen/logrus"
 
-	_ "github.com/botlabs-gg/yagpdb/v2/bot" // register the custom orchestrator events
+	_ "github.com/cirelion/flint/bot" // register the custom orchestrator events
 )
-
-var ()
 
 func main() {
 	common.RedisPoolSize = 2

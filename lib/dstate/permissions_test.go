@@ -3,7 +3,7 @@ package dstate
 import (
 	"testing"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/lib/discordgo"
 )
 
 func TestGuildPermissions(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator/node"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dshardorchestrator"
+	"github.com/cirelion/flint/lib/dshardorchestrator/node"
 )
 
 type Bot struct {

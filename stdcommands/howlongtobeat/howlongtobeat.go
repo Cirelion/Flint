@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot/paginatedmessages"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/bot/paginatedmessages"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/lib/discordgo"
 )
 
 type hltb struct {

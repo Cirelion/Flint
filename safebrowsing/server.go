@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
 	"github.com/google/safebrowsing"
 	"github.com/sirupsen/logrus"
 )

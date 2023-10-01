@@ -1,7 +1,7 @@
 package messagelogs
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/lib/discordgo"
 	"time"
 )
 

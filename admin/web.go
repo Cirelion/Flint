@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/bot/botrest"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
-	"github.com/botlabs-gg/yagpdb/v2/common/internalapi"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator/orchestrator/rest"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/bot/botrest"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
+	"github.com/cirelion/flint/common/internalapi"
+	"github.com/cirelion/flint/lib/dshardorchestrator/orchestrator/rest"
+	"github.com/cirelion/flint/web"
 	"goji.io"
 	"goji.io/pat"
 )

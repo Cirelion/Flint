@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dshardorchestrator/node"
+	"github.com/cirelion/flint/lib/dshardorchestrator"
+	"github.com/cirelion/flint/lib/dshardorchestrator/node"
 )
 
 type MockLauncher struct {

@@ -8,11 +8,11 @@ import (
 
 	"emperror.dev/errors"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/pubsub"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
 	"github.com/bwmarrin/snowflake"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/pubsub"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
 	"github.com/mediocregopher/radix/v3"
 	"github.com/patrickmn/go-cache"
 )

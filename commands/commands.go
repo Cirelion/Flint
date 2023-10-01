@@ -6,14 +6,14 @@ package commands
 import (
 	"context"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
-	"github.com/botlabs-gg/yagpdb/v2/commands/models"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
-	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
-	prfx "github.com/botlabs-gg/yagpdb/v2/common/prefix"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/bot/eventsystem"
+	"github.com/cirelion/flint/commands/models"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
+	"github.com/cirelion/flint/common/featureflags"
+	prfx "github.com/cirelion/flint/common/prefix"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/volatiletech/sqlboiler/queries/qm"
 )
 

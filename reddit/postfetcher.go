@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	greddit "github.com/botlabs-gg/yagpdb/v2/lib/go-reddit"
+	"github.com/cirelion/flint/common"
+	greddit "github.com/cirelion/flint/lib/go-reddit"
 	"github.com/mediocregopher/radix/v3"
 	"github.com/sirupsen/logrus"
 )

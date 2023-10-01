@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/gojay"
+	"github.com/cirelion/flint/lib/gojay"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/nacl/secretbox"
 )

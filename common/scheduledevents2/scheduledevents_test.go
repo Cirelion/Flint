@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/scheduledevents2/models"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/scheduledevents2/models"
 )
 
 var SchemaInit = false

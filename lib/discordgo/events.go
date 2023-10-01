@@ -1,7 +1,7 @@
 package discordgo
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/lib/gojay"
+	"github.com/cirelion/flint/lib/gojay"
 	"github.com/pkg/errors"
 )
 

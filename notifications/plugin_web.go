@@ -6,11 +6,11 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/configstore"
-	"github.com/botlabs-gg/yagpdb/v2/common/cplogs"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/configstore"
+	"github.com/cirelion/flint/common/cplogs"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/web"
 	"goji.io/pat"
 )
 

@@ -1,13 +1,17 @@
 package topic
 
 import (
+	"context"
+	"fmt"
+	"github.com/cirelion/flint/fun"
 	"math/rand"
+	"strings"
 
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
 )
 
-var Command = &commands.YAGCommand{
+var Topic = &commands.YAGCommand{
 	Cooldown:                  5,
 	CmdCategory:               commands.CategoryFun,
 	Name:                      "Topic",
@@ -15,7 +19,35 @@ var Command = &commands.YAGCommand{
 	DefaultEnabled:            true,
 	ApplicationCommandEnabled: true,
 	RunFunc: func(data *dcmd.Data) (interface{}, error) {
-		topic := ChatTopics[rand.Intn(len(ChatTopics))]
-		return "> " + topic, nil
+		config, err := fun.GetConfig(context.Background(), data.GuildData.GS.ID)
+		if err != nil {
+			return false, err
+		}
+
+		topics := strings.Split(config.Topics, "\n")
+		topic := strings.TrimSpace(topics[rand.Intn(len(topics))])
+
+		return fmt.Sprintf("> %s", topic), nil
+	},
+}
+
+var NSFWTopic = &commands.YAGCommand{
+	Cooldown:                  5,
+	CmdCategory:               commands.CategoryFun,
+	Name:                      "NSFWTopic",
+	Description:               "Generates a NSFW conversation topic to help chat get moving.",
+	DefaultEnabled:            true,
+	NSFW:                      true,
+	ApplicationCommandEnabled: true,
+	RunFunc: func(data *dcmd.Data) (interface{}, error) {
+		config, err := fun.GetConfig(context.Background(), data.GuildData.GS.ID)
+		if err != nil {
+			return false, err
+		}
+
+		topics := strings.Split(config.NSFWTopics, "\n")
+		topic := strings.TrimSpace(topics[rand.Intn(len(topics))])
+
+		return fmt.Sprintf("> %s", topic), nil
 	},
 }

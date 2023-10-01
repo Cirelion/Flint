@@ -8,12 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/mqueue"
-	"github.com/botlabs-gg/yagpdb/v2/common/pubsub"
-	"github.com/botlabs-gg/yagpdb/v2/lib/go-reddit"
-	"github.com/botlabs-gg/yagpdb/v2/premium"
-	"github.com/botlabs-gg/yagpdb/v2/reddit/models"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/mqueue"
+	"github.com/cirelion/flint/common/pubsub"
+	"github.com/cirelion/flint/premium"
+	"github.com/cirelion/flint/reddit/models"
 )
 
 const (

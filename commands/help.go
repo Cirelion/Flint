@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot/paginatedmessages"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/bot/paginatedmessages"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/web"
 )
 
 var cmdHelp = &YAGCommand{

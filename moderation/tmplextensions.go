@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/templates"
-	"github.com/botlabs-gg/yagpdb/v2/logs"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/templates"
+	"github.com/cirelion/flint/logs"
 	"github.com/jinzhu/gorm"
 )
 

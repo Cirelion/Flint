@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/models"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/web/discorddata"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/models"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/web/discorddata"
 	"github.com/mediocregopher/radix/v3"
 	"golang.org/x/oauth2"
 )

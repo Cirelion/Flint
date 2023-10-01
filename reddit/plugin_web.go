@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/cplogs"
-	"github.com/botlabs-gg/yagpdb/v2/common/pubsub"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/reddit/models"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/cplogs"
+	"github.com/cirelion/flint/common/pubsub"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/reddit/models"
+	"github.com/cirelion/flint/web"
 	"github.com/volatiletech/sqlboiler/boil"
 	"github.com/volatiletech/sqlboiler/queries/qm"
 	"goji.io"
@@ -282,19 +282,19 @@ func (p *Plugin) LoadServerHomeWidget(w http.ResponseWriter, r *http.Request) (w
 
 	var slow int
 	var fast int
-	var isSlow bool;
+	var isSlow bool
 
 	for rows.Next() {
 		var err error
 		var val int
 		err = rows.Scan(&val, &isSlow)
-		if(err != nil){
+		if err != nil {
 			return templateData, err
 		}
-		if(isSlow){
-			slow = val;
-		}else {
-			fast = val;
+		if isSlow {
+			slow = val
+		} else {
+			fast = val
 		}
 	}
 

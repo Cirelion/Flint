@@ -3,8 +3,8 @@ package featureflags
 import (
 	"sync"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/pubsub"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/pubsub"
 )
 
 var logger = common.GetPluginLogger(&Plugin{})

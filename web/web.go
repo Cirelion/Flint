@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
-	"github.com/botlabs-gg/yagpdb/v2/common/patreon"
-	yagtmpl "github.com/botlabs-gg/yagpdb/v2/common/templates"
-	"github.com/botlabs-gg/yagpdb/v2/frontend"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/web/discordblog"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
+	"github.com/cirelion/flint/common/patreon"
+	yagtmpl "github.com/cirelion/flint/common/templates"
+	"github.com/cirelion/flint/frontend"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/web/discordblog"
 	"github.com/natefinch/lumberjack"
 	"goji.io"
 	"goji.io/pat"
@@ -134,7 +134,6 @@ func BaseURL() string {
 	return "http://" + common.ConfHost.GetString()
 }
 
-
 func ManageServerURL(guild *dcmd.GuildContextData) string {
 	return fmt.Sprintf("%s/manage/%d", BaseURL(), guild.GS.ID)
 }
@@ -213,7 +212,7 @@ func IsAcceptingRequests() bool {
 
 func runServers(mainMuxer *goji.Mux) {
 	if !https {
-		logger.Info("Starting yagpdb web server http:", ListenAddressHTTP)
+		logger.Info("Starting Flint web server http:", ListenAddressHTTP)
 
 		server := &http.Server{
 			Addr:        ListenAddressHTTP,
@@ -226,7 +225,7 @@ func runServers(mainMuxer *goji.Mux) {
 			logger.Error("Failed http ListenAndServe:", err)
 		}
 	} else {
-		logger.Info("Starting yagpdb web server http:", ListenAddressHTTP, ", and https:", ListenAddressHTTPS)
+		logger.Info("Starting Flint web server http:", ListenAddressHTTP, ", and https:", ListenAddressHTTPS)
 
 		cache := autocert.DirCache("cert")
 

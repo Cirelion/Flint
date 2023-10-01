@@ -3,8 +3,8 @@ package analytics
 import (
 	"sync"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
 	"github.com/mediocregopher/radix/v3"
 )
 

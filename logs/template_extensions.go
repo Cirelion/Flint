@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/common/templates"
+	"github.com/cirelion/flint/common/templates"
 )
 
 func init() {

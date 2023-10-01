@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/mqueue"
-	"github.com/botlabs-gg/yagpdb/v2/common/scheduledevents2"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/mqueue"
+	"github.com/cirelion/flint/common/scheduledevents2"
+	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 )

@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/internalapi"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/internalapi"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
 	"github.com/mediocregopher/radix/v3"
 )
 

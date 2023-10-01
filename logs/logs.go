@@ -11,24 +11,22 @@ import (
 	"sync"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/config"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/logs/models"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/config"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/logs/models"
+	"github.com/cirelion/flint/web"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"golang.org/x/net/context"
 )
 
-
-
 var (
 	ErrChannelBlacklisted     = errors.New("Channel blacklisted from creating message logs")
 	ConfEnableMessageLogPurge = config.RegisterOption("yagpdb.enable_message_log_purge", "If enabled message logs older than 30 days will be deleted", false)
-	logger = common.GetPluginLogger(&Plugin{})
+	logger                    = common.GetPluginLogger(&Plugin{})
 )
 
 type Plugin struct {

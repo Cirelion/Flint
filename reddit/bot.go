@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/reddit/models"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/util"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/reddit/models"
+	"github.com/cirelion/flint/stdcommands/util"
 	"github.com/volatiletech/sqlboiler/queries/qm"
 )
 

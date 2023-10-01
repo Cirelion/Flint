@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
 )
 
 type Joke struct {
@@ -29,7 +29,7 @@ var Command = &commands.YAGCommand{
 		}
 		//Set the headers that will be sent to the API to determine the response.
 		req.Header.Set("Accept", "application/json")
-		req.Header.Add("User-Agent", "YAGPDB.xyz (https://github.com/botlabs-gg/yagpdb)")
+		req.Header.Add("User-Agent", "Flint (https://github.com/cirelion/flint)")
 
 		apiResp, err := http.DefaultClient.Do(req)
 		if err != nil {

@@ -1,4 +1,4 @@
-module github.com/botlabs-gg/yagpdb/v2
+module github.com/cirelion/flint
 
 go 1.20
 

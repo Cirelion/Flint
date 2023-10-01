@@ -3,9 +3,9 @@ package guildunavailable
 import (
 	"fmt"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot/botrest"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
+	"github.com/cirelion/flint/bot/botrest"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
 )
 
 var Command = &commands.YAGCommand{

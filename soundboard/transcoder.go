@@ -11,11 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/backgroundworkers"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dca"
-	"github.com/botlabs-gg/yagpdb/v2/soundboard/models"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/backgroundworkers"
+	"github.com/cirelion/flint/lib/dca"
+	"github.com/cirelion/flint/soundboard/models"
 	"goji.io/pat"
 )
 

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/util"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/bot/eventsystem"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/stdcommands/util"
 )
 
 var Command = &commands.YAGCommand{

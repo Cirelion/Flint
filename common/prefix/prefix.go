@@ -1,9 +1,9 @@
 package prefix
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/featureflags"
+	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/mediocregopher/radix/v3"
 )
 

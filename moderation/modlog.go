@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/discordgo"
 )
 
 type ModlogAction struct {

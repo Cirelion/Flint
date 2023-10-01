@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -74,7 +74,7 @@ var disableOnError = []int{
 	discordgo.ErrCodeUnknownChannel,
 	discordgo.ErrCodeMissingAccess,
 	discordgo.ErrCodeMissingPermissions,
-	30007, // max number of webhooks
+	30007,  // max number of webhooks
 	220001, // webhook points to a forum channel
 }
 

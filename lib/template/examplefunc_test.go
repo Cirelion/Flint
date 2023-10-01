@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/template"
+	"github.com/cirelion/flint/lib/template"
 )
 
 // This example demonstrates a custom function to process template text.

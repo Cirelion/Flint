@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/lib/jarowinkler"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/lib/jarowinkler"
 )
 
 func getGameData(searchTitle string) ([]hltb, error) {

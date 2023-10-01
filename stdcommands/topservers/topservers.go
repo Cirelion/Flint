@@ -3,11 +3,11 @@ package topservers
 import (
 	"fmt"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot/models"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dcmd"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/util"
+	"github.com/cirelion/flint/bot/models"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/dcmd"
+	"github.com/cirelion/flint/stdcommands/util"
 	"github.com/volatiletech/sqlboiler/queries/qm"
 )
 

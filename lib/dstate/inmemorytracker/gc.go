@@ -4,7 +4,7 @@ import (
 	"container/list"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
+	"github.com/cirelion/flint/lib/dstate"
 )
 
 func (shard *ShardTracker) runGcLoop(interval time.Duration) {

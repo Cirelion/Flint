@@ -3,9 +3,9 @@ package customcommands
 import (
 	"testing"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/customcommands/models"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/customcommands/models"
+	"github.com/cirelion/flint/lib/discordgo"
 )
 
 func TestCheckMatch(t *testing.T) {

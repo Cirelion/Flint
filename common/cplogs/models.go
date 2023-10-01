@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
+	"github.com/cirelion/flint/common"
 )
 
 const DBSchema = `

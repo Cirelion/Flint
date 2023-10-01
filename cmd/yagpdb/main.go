@@ -1,44 +1,45 @@
 package main
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/analytics"
-	"github.com/botlabs-gg/yagpdb/v2/antiphishing"
-	"github.com/botlabs-gg/yagpdb/v2/applications"
-	"github.com/botlabs-gg/yagpdb/v2/autorole"
-	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
-	"github.com/botlabs-gg/yagpdb/v2/common/prom"
-	"github.com/botlabs-gg/yagpdb/v2/common/run"
-	"github.com/botlabs-gg/yagpdb/v2/games"
-	"github.com/botlabs-gg/yagpdb/v2/giveaways"
-	"github.com/botlabs-gg/yagpdb/v2/heartboard"
-	"github.com/botlabs-gg/yagpdb/v2/lib/confusables"
-	"github.com/botlabs-gg/yagpdb/v2/messagelogs"
-	"github.com/botlabs-gg/yagpdb/v2/polls"
-	"github.com/botlabs-gg/yagpdb/v2/web/discorddata"
+	"github.com/cirelion/flint/analytics"
+	"github.com/cirelion/flint/antiphishing"
+	"github.com/cirelion/flint/applications"
+	"github.com/cirelion/flint/autorole"
+	"github.com/cirelion/flint/common/featureflags"
+	"github.com/cirelion/flint/common/prom"
+	"github.com/cirelion/flint/common/run"
+	"github.com/cirelion/flint/fun"
+	"github.com/cirelion/flint/games"
+	"github.com/cirelion/flint/giveaways"
+	"github.com/cirelion/flint/heartboard"
+	"github.com/cirelion/flint/lib/confusables"
+	"github.com/cirelion/flint/messagelogs"
+	"github.com/cirelion/flint/polls"
+	"github.com/cirelion/flint/web/discorddata"
 
 	// Core yagpdb packages
-	"github.com/botlabs-gg/yagpdb/v2/admin"
-	"github.com/botlabs-gg/yagpdb/v2/bot/paginatedmessages"
-	"github.com/botlabs-gg/yagpdb/v2/common/internalapi"
-	"github.com/botlabs-gg/yagpdb/v2/common/scheduledevents2"
+	"github.com/cirelion/flint/admin"
+	"github.com/cirelion/flint/bot/paginatedmessages"
+	"github.com/cirelion/flint/common/internalapi"
+	"github.com/cirelion/flint/common/scheduledevents2"
 
 	// Plugin imports
-	"github.com/botlabs-gg/yagpdb/v2/automod"
+	"github.com/cirelion/flint/automod"
 
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/customcommands"
-	"github.com/botlabs-gg/yagpdb/v2/discordlogger"
-	"github.com/botlabs-gg/yagpdb/v2/logs"
-	"github.com/botlabs-gg/yagpdb/v2/moderation"
-	"github.com/botlabs-gg/yagpdb/v2/notifications"
-	"github.com/botlabs-gg/yagpdb/v2/premium"
-	"github.com/botlabs-gg/yagpdb/v2/premium/patreonpremiumsource"
-	"github.com/botlabs-gg/yagpdb/v2/reputation"
-	"github.com/botlabs-gg/yagpdb/v2/safebrowsing"
-	"github.com/botlabs-gg/yagpdb/v2/serverstats"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands"
-	//"github.com/botlabs-gg/yagpdb/v2/tickets"
-	"github.com/botlabs-gg/yagpdb/v2/verification"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/customcommands"
+	"github.com/cirelion/flint/discordlogger"
+	"github.com/cirelion/flint/logs"
+	"github.com/cirelion/flint/moderation"
+	"github.com/cirelion/flint/notifications"
+	"github.com/cirelion/flint/premium"
+	"github.com/cirelion/flint/premium/patreonpremiumsource"
+	"github.com/cirelion/flint/reputation"
+	"github.com/cirelion/flint/safebrowsing"
+	"github.com/cirelion/flint/serverstats"
+	"github.com/cirelion/flint/stdcommands"
+	//"github.com/cirelion/flint/tickets"
+	"github.com/cirelion/flint/verification"
 	// External plugins
 )
 
@@ -47,6 +48,7 @@ func main() {
 	run.Init()
 
 	//BotSession.LogLevel = discordgo.LogInformational
+	fun.RegisterPlugin()
 	applications.RegisterPlugin()
 	polls.RegisterPlugin()
 	giveaways.RegisterPlugin()

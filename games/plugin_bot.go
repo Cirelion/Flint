@@ -1,9 +1,9 @@
 package games
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/common"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/common"
 )
 
 type Plugin struct{}

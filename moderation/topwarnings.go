@@ -3,10 +3,10 @@ package moderation
 import (
 	"database/sql"
 
-	// "github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	// "github.com/botlabs-gg/yagpdb/v2/lib/dstate"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
+	// "github.com/cirelion/flint/lib/discordgo"
+	// "github.com/cirelion/flint/lib/dstate"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
 )
 
 type WarnRankEntry struct {

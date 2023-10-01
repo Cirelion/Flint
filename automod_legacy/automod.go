@@ -2,10 +2,10 @@ package automod_legacy
 
 import (
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/featureflags"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/web"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/featureflags"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/web"
 )
 
 var logger = common.GetPluginLogger(&Plugin{})

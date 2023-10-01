@@ -1,8 +1,8 @@
 package messagelogs
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/configstore"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/configstore"
 	"github.com/lib/pq"
 )
 

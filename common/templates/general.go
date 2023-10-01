@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"emperror.dev/errors"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/discordgo"
 )
 
 // dictionary creates a map[string]interface{} from the given parameters by

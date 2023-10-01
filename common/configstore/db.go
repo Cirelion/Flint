@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/common/pubsub"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/common/pubsub"
 	"github.com/jinzhu/gorm"
 	"github.com/karlseguin/ccache"
 	"golang.org/x/net/context"

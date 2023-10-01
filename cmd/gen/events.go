@@ -25,7 +25,7 @@ package bot
 import (
 	"context"
 	"github.com/sirupsen/logrus"
-	 "github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+	 "github.com/cirelion/flint/lib/discordgo"
 	"runtime/debug"
 )
 
@@ -77,11 +77,11 @@ type Event struct {
 }
 
 var NonStandardEvents = []Event{
-	Event{"NewGuild", false},
-	Event{"All", false},
-	Event{"AllPre", false},
-	Event{"AllPost", false},
-	Event{"MemberFetched", false},
+	{"NewGuild", false},
+	{"All", false},
+	{"AllPre", false},
+	{"AllPost", false},
+	{"MemberFetched", false},
 }
 
 var (

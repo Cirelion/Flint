@@ -1,6 +1,6 @@
 package applications
 
-import "github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
+import "github.com/cirelion/flint/lib/discordgo"
 
 var (
 	moderationQuestion1 = "Timezone and available hours in UTC"

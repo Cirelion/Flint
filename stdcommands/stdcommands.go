@@ -1,61 +1,61 @@
 package stdcommands
 
 import (
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/bot/eventsystem"
-	"github.com/botlabs-gg/yagpdb/v2/commands"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/viewperms"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/bot/eventsystem"
+	"github.com/cirelion/flint/commands"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/stdcommands/viewperms"
 
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/advice"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/allocstat"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/banserver"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/calc"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/catfact"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/ccreqs"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/createinvite"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/currentshard"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/currenttime"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/customembed"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dadjoke"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dcallvoice"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/define"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/dictionary"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/dogfact"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/eightball"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/findserver"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/forex"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/globalrl"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/guildunavailable"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/howlongtobeat"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/info"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/inspire"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/invite"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/leaveserver"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/listflags"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/listroles"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/memstats"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/ping"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/roast"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/roll"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/setstatus"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/simpleembed"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/sleep"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/statedbg"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/stateinfo"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/throw"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/toggledbg"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topcommands"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topevents"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/topgames"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/topic"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/topservers"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/unbanserver"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/undelete"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/weather"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/wouldyourather"
-	//"github.com/botlabs-gg/yagpdb/v2/stdcommands/xkcd"
-	"github.com/botlabs-gg/yagpdb/v2/stdcommands/yagstatus"
+	//"github.com/cirelion/flint/stdcommands/advice"
+	"github.com/cirelion/flint/stdcommands/allocstat"
+	"github.com/cirelion/flint/stdcommands/banserver"
+	"github.com/cirelion/flint/stdcommands/calc"
+	"github.com/cirelion/flint/stdcommands/catfact"
+	"github.com/cirelion/flint/stdcommands/ccreqs"
+	"github.com/cirelion/flint/stdcommands/createinvite"
+	"github.com/cirelion/flint/stdcommands/currentshard"
+	"github.com/cirelion/flint/stdcommands/currenttime"
+	"github.com/cirelion/flint/stdcommands/customembed"
+	"github.com/cirelion/flint/stdcommands/dadjoke"
+	"github.com/cirelion/flint/stdcommands/dcallvoice"
+	//"github.com/cirelion/flint/stdcommands/define"
+	//"github.com/cirelion/flint/stdcommands/dictionary"
+	"github.com/cirelion/flint/stdcommands/dogfact"
+	"github.com/cirelion/flint/stdcommands/eightball"
+	"github.com/cirelion/flint/stdcommands/findserver"
+	"github.com/cirelion/flint/stdcommands/forex"
+	"github.com/cirelion/flint/stdcommands/globalrl"
+	"github.com/cirelion/flint/stdcommands/guildunavailable"
+	"github.com/cirelion/flint/stdcommands/howlongtobeat"
+	"github.com/cirelion/flint/stdcommands/info"
+	//"github.com/cirelion/flint/stdcommands/inspire"
+	"github.com/cirelion/flint/stdcommands/invite"
+	"github.com/cirelion/flint/stdcommands/leaveserver"
+	"github.com/cirelion/flint/stdcommands/listflags"
+	"github.com/cirelion/flint/stdcommands/listroles"
+	"github.com/cirelion/flint/stdcommands/memstats"
+	"github.com/cirelion/flint/stdcommands/ping"
+	//"github.com/cirelion/flint/stdcommands/roast"
+	"github.com/cirelion/flint/stdcommands/roll"
+	"github.com/cirelion/flint/stdcommands/setstatus"
+	"github.com/cirelion/flint/stdcommands/simpleembed"
+	"github.com/cirelion/flint/stdcommands/sleep"
+	"github.com/cirelion/flint/stdcommands/statedbg"
+	"github.com/cirelion/flint/stdcommands/stateinfo"
+	"github.com/cirelion/flint/stdcommands/throw"
+	"github.com/cirelion/flint/stdcommands/toggledbg"
+	"github.com/cirelion/flint/stdcommands/topcommands"
+	"github.com/cirelion/flint/stdcommands/topevents"
+	//"github.com/cirelion/flint/stdcommands/topgames"
+	"github.com/cirelion/flint/stdcommands/topic"
+	//"github.com/cirelion/flint/stdcommands/topservers"
+	"github.com/cirelion/flint/stdcommands/unbanserver"
+	"github.com/cirelion/flint/stdcommands/undelete"
+	//"github.com/cirelion/flint/stdcommands/weather"
+	"github.com/cirelion/flint/stdcommands/wouldyourather"
+	//"github.com/cirelion/flint/stdcommands/xkcd"
+	"github.com/cirelion/flint/stdcommands/yagstatus"
 )
 
 var (
@@ -83,7 +83,8 @@ func (p *Plugin) AddCommands() {
 		//define.Command,
 		//weather.Command,
 		calc.Command,
-		topic.Command,
+		topic.Topic,
+		topic.NSFWTopic,
 		catfact.Command,
 		dadjoke.Command,
 		dogfact.Command,
@@ -96,7 +97,8 @@ func (p *Plugin) AddCommands() {
 		currenttime.Command,
 		listroles.Command,
 		memstats.Command,
-		wouldyourather.Command,
+		wouldyourather.Wyr,
+		wouldyourather.NSFWWyr,
 		undelete.Command,
 		viewperms.Command,
 		//topgames.Command,

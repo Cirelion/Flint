@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common/templates"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
-	"github.com/botlabs-gg/yagpdb/v2/tickets/models"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common/templates"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
+	"github.com/cirelion/flint/tickets/models"
 	"github.com/volatiletech/null"
 )
 

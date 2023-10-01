@@ -9,15 +9,15 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/botlabs-gg/yagpdb/v2/antiphishing"
-	"github.com/botlabs-gg/yagpdb/v2/automod/models"
-	"github.com/botlabs-gg/yagpdb/v2/automod_legacy"
-	"github.com/botlabs-gg/yagpdb/v2/bot"
-	"github.com/botlabs-gg/yagpdb/v2/common"
-	"github.com/botlabs-gg/yagpdb/v2/lib/confusables"
-	"github.com/botlabs-gg/yagpdb/v2/lib/discordgo"
-	"github.com/botlabs-gg/yagpdb/v2/lib/dstate"
-	"github.com/botlabs-gg/yagpdb/v2/safebrowsing"
+	"github.com/cirelion/flint/antiphishing"
+	"github.com/cirelion/flint/automod/models"
+	"github.com/cirelion/flint/automod_legacy"
+	"github.com/cirelion/flint/bot"
+	"github.com/cirelion/flint/common"
+	"github.com/cirelion/flint/lib/confusables"
+	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
+	"github.com/cirelion/flint/safebrowsing"
 )
 
 var forwardSlashReplacer = strings.NewReplacer("\\", "")
