@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cirelion/flint/bot"
 	"github.com/cirelion/flint/bot/eventsystem"
-	"github.com/cirelion/flint/commands"
 	"github.com/cirelion/flint/common"
 	"github.com/cirelion/flint/lib/discordgo"
 	"github.com/cirelion/flint/lib/dstate"
@@ -41,12 +40,6 @@ var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
 	eventsystem.AddHandlerAsyncLastLegacy(p, bot.ConcurrentEventHandler(handleReaction), eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
-}
-
-func (p *Plugin) AddCommands() {
-	commands.AddRootCommands(p,
-		AddToHeartBoard,
-	)
 }
 
 func handleReaction(evt *eventsystem.EventData) {
@@ -117,7 +110,6 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		logger.Error(err)
 		return
 	}
-
 	if !message.Author.Bot && (message.Content != "" || len(message.Attachments) > 0) {
 		memberQuote := &MemberQuote{
 			MessageID: reaction.MessageID,
@@ -365,8 +357,13 @@ func generateShowcaseEmbed(showcase *Showcase) *discordgo.MessageEmbed {
 	return embed
 }
 
+var audioRegex = regexp.MustCompile(`ogg|mp3`)
+var videoRegex = regexp.MustCompile(`mp4|mov|wav|webm`)
+
 func generateMemberQuoteEmbed(memberQuote *MemberQuote, quoteEmoji string) *discordgo.MessageEmbed {
 	member, err := bot.GetMember(memberQuote.GuildID, memberQuote.AuthorID)
+	messageLink := fmt.Sprintf("https://discord.com/channels/%d/%d/%d", memberQuote.GuildID, memberQuote.ChannelID, memberQuote.MessageID)
+
 	if err != nil {
 		logger.Error("memberErr: ", memberQuote.GuildID, memberQuote.AuthorID, err)
 		return nil
@@ -376,9 +373,6 @@ func generateMemberQuoteEmbed(memberQuote *MemberQuote, quoteEmoji string) *disc
 		Color: rand.Intn(16777215),
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
 			URL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
-		},
-		Image: &discordgo.MessageEmbedImage{
-			URL: memberQuote.ImageUrl,
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Author", Value: member.User.Mention(), Inline: true},
@@ -393,8 +387,18 @@ func generateMemberQuoteEmbed(memberQuote *MemberQuote, quoteEmoji string) *disc
 	if memberQuote.Content != "" {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Content", Value: memberQuote.Content})
 	}
-
-	embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Message", Value: fmt.Sprintf("[Jump to](%s)", fmt.Sprintf("https://discord.com/channels/%d/%d/%d", memberQuote.GuildID, memberQuote.ChannelID, memberQuote.MessageID))})
+	if audioRegex.MatchString(memberQuote.ImageUrl) {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "File Type", Value: "Audio"})
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Message", Value: fmt.Sprintf("[Jump to](%s)", messageLink)})
+	} else if videoRegex.MatchString(memberQuote.ImageUrl) {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "File Type", Value: "Video"})
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Message", Value: fmt.Sprintf("[Jump to](%s)", messageLink)})
+	} else {
+		embed.Image = &discordgo.MessageEmbedImage{
+			URL: memberQuote.ImageUrl,
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{Name: "Message", Value: fmt.Sprintf("[Jump to](%s)", messageLink)})
+	}
 
 	return embed
 }

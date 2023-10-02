@@ -203,7 +203,7 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 	messageSend := &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}}
 	var fileName string
 	if len(message.Attachments) == 1 {
-		fileName = downloadFile(message.Attachments[0].Url)
+		fileName = DownloadFile(message.Attachments[0].Url)
 		file, fileErr := os.Open(fileName)
 		if fileErr != nil {
 			return false, fileErr
@@ -220,7 +220,7 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 
 	if len(message.Attachments) != 1 {
 		for _, attachment := range message.Attachments {
-			fileName = downloadFile(attachment.Url)
+			fileName = DownloadFile(attachment.Url)
 			file, fileErr := os.Open(fileName)
 			if fileErr != nil {
 				return false, fileErr
@@ -305,7 +305,7 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 	return embed, nil
 }
 
-func downloadFile(filePath string) string {
+func DownloadFile(filePath string) string {
 	fileURL, err := url.Parse(filePath)
 	if err != nil {
 		log.Fatal(err)
