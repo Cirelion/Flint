@@ -850,7 +850,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		RequiredDiscordPermsHelp:  "ManageMessages or ManageServer",
 		ApplicationCommandEnabled: true,
 		DefaultEnabled:            false,
-		IsResponseEphemeral:       true,
+		IsResponseEphemeral:       false,
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			var proof string
 			config, target, err := MBaseCmd(parsed, parsed.Args[0].Int64())
