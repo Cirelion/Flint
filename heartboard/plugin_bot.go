@@ -39,7 +39,7 @@ func RegisterPlugin() {
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
-	eventsystem.AddHandlerAsyncLastLegacy(p, bot.ConcurrentEventHandler(handleReaction), eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
+	eventsystem.AddHandlerAsyncLastLegacy(p, handleReaction, eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
 }
 
 func handleReaction(evt *eventsystem.EventData) {
@@ -93,7 +93,7 @@ func initMemberQuote(guildID int64, message *discordgo.Message) *MemberQuote {
 		memberQuote.ImageUrl = message.Attachments[0].URL
 	}
 
-	err = common.GORM.Model(memberQuote).Save(memberQuote).Error
+	err = common.GORM.Model(memberQuote).FirstOrCreate(memberQuote).Error
 	if err != nil {
 		logger.Error(err)
 	}
@@ -110,6 +110,7 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		logger.Error(err)
 		return
 	}
+
 	if !message.Author.Bot && (message.Content != "" || len(message.Attachments) > 0) {
 		memberQuote := &MemberQuote{
 			MessageID: reaction.MessageID,
@@ -150,7 +151,6 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			}
 
 			if hasUserReacted {
-				time.Sleep(time.Second * 2)
 				err = common.BotSession.MessageReactionRemove(message.ChannelID, message.ID, reaction.Emoji.Name, reaction.UserID)
 				if err != nil {
 					logger.Error(err)
@@ -161,7 +161,19 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			memberQuote.Approval = handleCountApproval(message.Reactions, "⭐") + handleCountApproval(starboardMessage.Reactions, "⭐")
 		}
 
+		err = common.GORM.Model(memberQuote).Find(memberQuote).Error
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		if handleCountApproval(message.Reactions, "⭐") > memberQuote.Approval && memberQuote.StarBoardMessageID <= 1 {
+			time.Sleep(time.Second * 5)
+			err = common.GORM.Model(memberQuote).Find(memberQuote).Error
+		}
+
 		if memberQuote.Approval >= config.StarBoardThreshold {
+			memberQuote.Approval = handleCountApproval(message.Reactions, "⭐")
 			if memberQuote.StarBoardMessageID > 1 {
 				if memberQuote.Approval >= config.StarBoardThreshold*2 {
 					starboardEmoji = "🌟"
@@ -197,6 +209,7 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 				logger.Error(err)
 				return
 			}
+			logger.Warn("Trigger")
 			memberQuote.StarBoardMessageID = 1
 		}
 
@@ -240,7 +253,6 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		}
 
 		if hasUserReacted {
-			time.Sleep(time.Second * 2)
 			err = common.BotSession.MessageReactionRemove(message.ChannelID, memberQuote.StarBoardMessageID, reaction.Emoji.Name, reaction.UserID)
 			if err != nil {
 				logger.Error(err)

@@ -258,7 +258,7 @@ func InvalidateCache(guildID, userID int64) {
 }
 
 func ConcurrentEventHandler(inner eventsystem.HandlerFuncLegacy) eventsystem.HandlerFuncLegacy {
-	return eventsystem.HandlerFuncLegacy(func(evt *eventsystem.EventData) {
+	return func(evt *eventsystem.EventData) {
 		go func() {
 			defer func() {
 				if err := recover(); err != nil {
@@ -269,13 +269,13 @@ func ConcurrentEventHandler(inner eventsystem.HandlerFuncLegacy) eventsystem.Han
 
 			inner(evt)
 		}()
-	})
+	}
 }
 
 func LimitedConcurrentEventHandler(inner eventsystem.HandlerFuncLegacy, limit int64, sleepDur time.Duration) eventsystem.HandlerFuncLegacy {
 	counter := new(int64)
 
-	return eventsystem.HandlerFuncLegacy(func(evt *eventsystem.EventData) {
+	return func(evt *eventsystem.EventData) {
 		go func() {
 			defer func() {
 				atomic.AddInt64(counter, -1)
@@ -298,7 +298,7 @@ func LimitedConcurrentEventHandler(inner eventsystem.HandlerFuncLegacy, limit in
 
 			inner(evt)
 		}()
-	})
+	}
 }
 
 func HandleReactionAdd(evt *eventsystem.EventData) {
