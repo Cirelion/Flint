@@ -34,6 +34,7 @@ type Ticket struct {
 	AuthorID              int64     `boil:"author_id" json:"author_id" toml:"author_id" yaml:"author_id"`
 	AuthorUsernameDiscrim string    `boil:"author_username_discrim" json:"author_username_discrim" toml:"author_username_discrim" yaml:"author_username_discrim"`
 	Question              string    `boil:"question" json:"question" toml:"question" yaml:"question"`
+	Logs                  string    `boil:"logs" json:"logs" toml:"logs" yaml:"logs"`
 
 	R *ticketR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L ticketL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -50,6 +51,7 @@ var TicketColumns = struct {
 	AuthorID              string
 	AuthorUsernameDiscrim string
 	Question              string
+	Logs                  string
 }{
 	GuildID:               "guild_id",
 	LocalID:               "local_id",
@@ -61,6 +63,7 @@ var TicketColumns = struct {
 	AuthorID:              "author_id",
 	AuthorUsernameDiscrim: "author_username_discrim",
 	Question:              "question",
+	Logs:                  "logs",
 }
 
 var TicketTableColumns = struct {
@@ -74,6 +77,7 @@ var TicketTableColumns = struct {
 	AuthorID              string
 	AuthorUsernameDiscrim string
 	Question              string
+	Logs                  string
 }{
 	GuildID:               "tickets.guild_id",
 	LocalID:               "tickets.local_id",
@@ -85,6 +89,7 @@ var TicketTableColumns = struct {
 	AuthorID:              "tickets.author_id",
 	AuthorUsernameDiscrim: "tickets.author_username_discrim",
 	Question:              "tickets.question",
+	Logs:                  "tickets.logs",
 }
 
 // Generated where
@@ -145,6 +150,7 @@ var TicketWhere = struct {
 	AuthorID              whereHelperint64
 	AuthorUsernameDiscrim whereHelperstring
 	Question              whereHelperstring
+	Logs                  whereHelperstring
 }{
 	GuildID:               whereHelperint64{field: "\"tickets\".\"guild_id\""},
 	LocalID:               whereHelperint64{field: "\"tickets\".\"local_id\""},
@@ -156,6 +162,7 @@ var TicketWhere = struct {
 	AuthorID:              whereHelperint64{field: "\"tickets\".\"author_id\""},
 	AuthorUsernameDiscrim: whereHelperstring{field: "\"tickets\".\"author_username_discrim\""},
 	Question:              whereHelperstring{field: "\"tickets\".\"question\""},
+	Logs:                  whereHelperstring{field: "\"tickets\".\"logs\""},
 }
 
 // TicketRels is where relationship names are stored.
@@ -175,9 +182,9 @@ func (*ticketR) NewStruct() *ticketR {
 type ticketL struct{}
 
 var (
-	ticketAllColumns            = []string{"guild_id", "local_id", "channel_id", "title", "created_at", "closed_at", "logs_id", "author_id", "author_username_discrim", "question"}
+	ticketAllColumns            = []string{"guild_id", "local_id", "channel_id", "title", "created_at", "closed_at", "logs_id", "author_id", "author_username_discrim", "question", "logs"}
 	ticketColumnsWithoutDefault = []string{"guild_id", "local_id", "channel_id", "title", "created_at", "logs_id", "author_id", "author_username_discrim"}
-	ticketColumnsWithDefault    = []string{"closed_at", "question"}
+	ticketColumnsWithDefault    = []string{"closed_at", "question", "logs"}
 	ticketPrimaryKeyColumns     = []string{"guild_id", "local_id"}
 	ticketGeneratedColumns      = []string{}
 )

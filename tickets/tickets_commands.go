@@ -150,7 +150,8 @@ func (p *Plugin) AddCommands() {
 			isAdminsOnly := ticketIsAdminOnly(conf, parsed.GuildData.CS)
 
 			// create the logs, download the attachments
-			err := createLogs(parsed.GuildData.GS, conf, currentTicket.Ticket, isAdminsOnly, &discordgo.MessageEmbed{
+			err := createLogs(parsed, conf, currentTicket.Ticket, isAdminsOnly, &discordgo.MessageEmbed{
+				URL:         fmt.Sprintf("%s/manage/%d/tickets/%d", web.BaseURL(), parsed.GuildData.GS.ID, currentTicket.Ticket.LocalID),
 				Title:       fmt.Sprintf("Ticket #%d - '%s' closed", currentTicket.Ticket.LocalID, currentTicket.Ticket.Title),
 				Description: fmt.Sprintf("Author: %s", currentTicket.Ticket.AuthorUsernameDiscrim),
 				Color:       0xf23c3c,
@@ -342,7 +343,7 @@ type Ticket struct {
 	Participants []*models.TicketParticipant
 }
 
-func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.Ticket, adminOnly bool, embed *discordgo.MessageEmbed) error {
+func createLogs(parsed *dcmd.Data, conf *models.TicketConfig, ticket *models.Ticket, adminOnly bool, embed *discordgo.MessageEmbed) error {
 
 	if !conf.TicketsUseTXTTranscripts && !conf.DownloadAttachments {
 		return nil // nothing to do here
@@ -357,7 +358,7 @@ func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.T
 
 	totalAttachmentSize := 0
 	for {
-		m, err := common.BotSession.ChannelMessages(channelID, 100, int64(before), 0, 0)
+		m, err := common.BotSession.ChannelMessages(channelID, 100, before, 0, 0)
 		if err != nil {
 			return err
 		}
@@ -412,8 +413,8 @@ func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.T
 		}
 	}
 
-	if conf.TicketsUseTXTTranscripts && gs.GetChannel(transcriptChannel(conf, adminOnly)) != nil {
-		formattedTranscript := createTXTTranscript(ticket, msgs)
+	if conf.TicketsUseTXTTranscripts && parsed.GuildData.GS.GetChannel(transcriptChannel(conf, adminOnly)) != nil {
+		formattedTranscript, textTranscript := createTXTTranscript(ticket, msgs)
 
 		channel := transcriptChannel(conf, adminOnly)
 		_, err := common.BotSession.ChannelMessageSendComplex(channel, &discordgo.MessageSend{
@@ -423,12 +424,15 @@ func createLogs(gs *dstate.GuildSet, conf *models.TicketConfig, ticket *models.T
 		if err != nil {
 			return err
 		}
+
+		ticket.Logs = textTranscript
 	}
 
 	// compress and send the attachments
-	if conf.DownloadAttachments && gs.GetChannel(transcriptChannel(conf, adminOnly)) != nil {
+	if conf.DownloadAttachments && parsed.GuildData.GS.GetChannel(transcriptChannel(conf, adminOnly)) != nil {
 		archiveAttachments(conf, ticket, attachments, adminOnly)
 	}
+	_, _ = ticket.UpdateG(parsed.Context(), boil.Whitelist("logs"))
 
 	return nil
 }
@@ -491,21 +495,28 @@ func archiveAttachments(conf *models.TicketConfig, ticket *models.Ticket, groups
 
 const TicketTXTDateFormat = "2006 Jan 02 15:04:05"
 
-func createTXTTranscript(ticket *models.Ticket, msgs []*discordgo.Message) *bytes.Buffer {
+func createTXTTranscript(ticket *models.Ticket, msgs []*discordgo.Message) (*bytes.Buffer, string) {
 	var buf bytes.Buffer
+	var text string
+	title := fmt.Sprintf("Transcript of ticket #%d - %s, opened by %s at %s, closed at %s.\n\n",
+		ticket.LocalID, ticket.Title, ticket.AuthorUsernameDiscrim, ticket.CreatedAt.UTC().Format(TicketTXTDateFormat), ticket.ClosedAt.Time.UTC().Format(TicketTXTDateFormat))
 
-	buf.WriteString(fmt.Sprintf("Transcript of ticket #%d - %s, opened by %s at %s, closed at %s.\n\n",
-		ticket.LocalID, ticket.Title, ticket.AuthorUsernameDiscrim, ticket.CreatedAt.UTC().Format(TicketTXTDateFormat), ticket.ClosedAt.Time.UTC().Format(TicketTXTDateFormat)))
-
+	buf.WriteString(title)
+	text += title
 	// traverse reverse for correct order (they come in with new-old order, we want old-new)
 	for i := len(msgs) - 1; i >= 0; i-- {
 		m := msgs[i]
 
-		// serialize mesasge content
+		// serialize message content
 		ts, _ := m.Timestamp.Parse()
-		buf.WriteString(fmt.Sprintf("[%s] %s (%d): ", ts.UTC().Format(TicketTXTDateFormat), m.Author.String(), m.Author.ID))
+		msgContent := fmt.Sprintf("[%s] %s: ", ts.UTC().Format(TicketTXTDateFormat), m.Author.String())
+		buf.WriteString(msgContent)
+		text += msgContent
+
 		if m.Content != "" {
 			buf.WriteString(m.Content)
+			text += m.Content
+
 			if len(m.Embeds) > 0 {
 				buf.WriteString(", ")
 			}
@@ -521,10 +532,11 @@ func createTXTTranscript(ticket *models.Ticket, msgs []*discordgo.Message) *byte
 			buf.Write(marshalled)
 		}
 
+		text += "\n"
 		buf.WriteRune('\n')
 	}
 
-	return &buf
+	return &buf, text
 }
 
 func ticketIsAdminOnly(conf *models.TicketConfig, cs *dstate.ChannelState) bool {

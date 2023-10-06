@@ -74,6 +74,13 @@ var (
 	SelectServerHomePageHandler http.Handler = RenderHandler(HandleSelectServer, "cp_selectserver")
 )
 
+func TicketTranscriptHandler(w http.ResponseWriter, r *http.Request) interface{} {
+	tID := pat.Param(r, "transcript_id")
+	logger.Warn(tID)
+
+	return tID
+}
+
 type Advertisement struct {
 	Path       template.URL
 	VideoUrls  []template.URL
@@ -114,7 +121,6 @@ func init() {
 }
 
 func loadTemplates() {
-
 	coreTemplates := []string{
 		"templates/index.html", "templates/cp_main.html",
 		"templates/cp_nav.html", "templates/cp_selectserver.html", "templates/cp_logs.html",
@@ -302,6 +308,9 @@ func setupRoutes() *goji.Mux {
 	RootMux.Handle(pat.Get("/status.json"), APIHandler(HandleStatusJSON))
 	RootMux.Handle(pat.Post("/shard/:shard/reconnect"), ControllerHandler(HandleReconnectShard, "cp_status"))
 	RootMux.Handle(pat.Post("/shard/:shard/reconnect/"), ControllerHandler(HandleReconnectShard, "cp_status"))
+
+	//Ticket html handler
+	RootMux.Handle(pat.Get("/ticket-transcript/:transcript_id"), APIHandler(TicketTranscriptHandler))
 
 	RootMux.HandleFunc(pat.Get("/cp"), legacyCPRedirHandler)
 	RootMux.HandleFunc(pat.Get("/cp/*"), legacyCPRedirHandler)

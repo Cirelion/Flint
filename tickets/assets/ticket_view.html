@@ -1,0 +1,30 @@
+{{define "cp_ticket_view"}}
+
+{{template "cp_head" .}}
+
+<div class="page-header">
+    <h2>Ticket - {{ .Ticket.LocalID }}</h2>
+</div>
+
+{{template "cp_alerts" .}}
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <h4>{{ .Ticket.Title }}</h4>
+        <h5>{{ .Ticket.Question}}</h5>
+    </div>
+    <div class="col-lg-12" style="white-space: pre-line">
+        {{ .Ticket.Logs }}
+    </div>
+</div>
+
+
+<script>
+    var logs = {{ .Ticket.Logs }};
+
+    console.log("ticket", logs)
+</script>
+{{template "cp_footer" .}}
+
+{{end}}

@@ -41,7 +41,7 @@ type ResetChannelRatelimitData struct {
 }
 
 func (p *Plugin) handleMsgUpdate(evt *eventsystem.EventData) {
-	//p.checkMessage(evt, evt.MessageUpdate().Message)
+	p.checkMessage(evt, evt.MessageUpdate().Message)
 }
 
 // called on new messages and edits

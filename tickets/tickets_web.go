@@ -7,6 +7,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"html/template"
 	"net/http"
+	"strconv"
 
 	"github.com/cirelion/flint/commands"
 	"github.com/cirelion/flint/common"
@@ -18,6 +19,9 @@ import (
 
 //go:embed assets/tickets_control_panel.html
 var PageHTML string
+
+//go:embed assets/ticket_view.html
+var TicketHTML string
 
 type FormData struct {
 	GuildID                            int64
@@ -37,6 +41,7 @@ var panelLogKey = cplogs.RegisterActionFormat(&cplogs.ActionFormat{Key: "tickets
 
 func (p *Plugin) InitWeb() {
 	web.AddHTMLTemplate("tickets_control_panel.html", PageHTML)
+	web.AddHTMLTemplate("ticket_view.html", TicketHTML)
 
 	web.AddSidebarItem(web.SidebarCategoryTools, &web.SidebarItem{
 		Name: "Ticket System",
@@ -45,12 +50,30 @@ func (p *Plugin) InitWeb() {
 	})
 
 	getHandler := web.ControllerHandler(p.handleGetSettings, "cp_tickets_settings")
+	getTicketHandler := web.ControllerHandler(p.handleGetTicket, "cp_ticket_view")
 	postHandler := web.ControllerPostHandler(p.handlePostSettings, getHandler, FormData{})
 
 	web.CPMux.Handle(pat.Get("/tickets/settings"), getHandler)
 	web.CPMux.Handle(pat.Get("/tickets/settings/"), getHandler)
 
+	web.CPMux.Handle(pat.Get("/tickets/:ticket"), getTicketHandler)
+	web.CPMux.Handle(pat.Get("/tickets/:ticket/"), getTicketHandler)
+
 	web.CPMux.Handle(pat.Post("/tickets/settings"), postHandler)
+}
+
+func (p *Plugin) handleGetTicket(w http.ResponseWriter, r *http.Request) (web.TemplateData, error) {
+	ctx := r.Context()
+	guild, templateData := web.GetBaseCPContextData(ctx)
+	ticketID, _ := strconv.ParseInt(pat.Param(r, "ticket"), 10, 64)
+
+	ticket, err := models.FindTicketG(ctx, guild.ID, ticketID)
+	if err != nil {
+		logger.Error(err)
+	}
+	templateData["Ticket"] = ticket
+
+	return templateData, nil
 }
 
 func (p *Plugin) handleGetSettings(w http.ResponseWriter, r *http.Request) (web.TemplateData, error) {

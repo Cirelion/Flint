@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 	title TEXT NOT NULL,
 	question TEXT NOT NULL,
+	logs TEXT NOT NULL,
 	
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
 	closed_at TIMESTAMP WITH TIME ZONE,
@@ -42,6 +43,8 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 `, `
 ALTER TABLE tickets ADD COLUMN IF NOT EXISTS question TEXT NOT NULL DEFAULT '';
+`, `
+ALTER TABLE tickets ADD COLUMN IF NOT EXISTS logs TEXT NOT NULL DEFAULT '';
 `, `
 CREATE INDEX IF NOT EXISTS tickets_guild_id_channel_id_idx ON tickets(guild_id, channel_id);
 
