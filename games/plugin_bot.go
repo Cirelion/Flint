@@ -18,7 +18,7 @@ func (p *Plugin) PluginInfo() *common.PluginInfo {
 
 func RegisterPlugin() {
 	common.RegisterPlugin(&Plugin{})
-	common.GORM.AutoMigrate(&Player{})
+	common.GORM.AutoMigrate(&Player{}, &Duel{})
 }
 
 var _ bot.BotInitHandler = (*Plugin)(nil)
@@ -29,6 +29,9 @@ func (p *Plugin) BotInit() {
 func (p *Plugin) AddCommands() {
 	commands.AddRootCommands(p,
 		Screws,
+		Fire,
+		AcceptDuel,
+		InitDuel,
 		GiveScrews,
 		ResetScrews,
 	)

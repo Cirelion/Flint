@@ -144,7 +144,7 @@ func (p *Plugin) StopBot(wg *sync.WaitGroup) {
 			return
 		}
 
-		logger.Infof("[commands] waiting for %d commands to finish running (d=%s)", n, time.Since(startedWaiting))
+		logger.Infof("[commands] waiting for %d commands to finish running first command: %s (d=%s)", n, runningCommands[0].Command.Name, time.Since(startedWaiting))
 		time.Sleep(time.Millisecond * 500)
 	}
 }

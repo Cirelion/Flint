@@ -164,6 +164,10 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 	config, err := moderation.GetConfig(evt.GS.ID)
 	if evt.Type == eventsystem.EventMessageDelete {
 		msg := evt.MessageDelete()
+		if msg.ID == 0 {
+			return
+		}
+
 		channelCategory := evt.GS.GetChannelOrThread(msg.ChannelID).ParentID
 		if IsIgnoredChannel(config, msg.ChannelID, channelCategory) {
 			return false, nil
@@ -188,7 +192,6 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 
 func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogChannelID int64, messageID int64) (retry bool, err error) {
 	message := &Message{MessageID: messageID}
-
 	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
 
 	member, err := bot.GetMember(guildID, message.AuthorID)

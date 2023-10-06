@@ -21,3 +21,21 @@ type Player struct {
 func (o Player) TableName() string {
 	return "players"
 }
+
+type Duel struct {
+	ID           uint  `gorm:"primary_key"`
+	ChallengerID int64 `json:"challenger_id"`
+	ChallengedID int64 `json:"challenged_id"`
+	WinnerID     int64 `json:"winner_id"`
+	GuildID      int64 `gorm:"index"`
+
+	Active    bool
+	Accepted  bool
+	Bet       int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (o Duel) TableName() string {
+	return "duel"
+}

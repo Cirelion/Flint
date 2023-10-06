@@ -63,6 +63,7 @@ var (
 )
 
 func rerollGiveaway(data *dcmd.Data) (interface{}, error) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	messageID := data.SlashCommandTriggerData.Interaction.DataCommand.TargetID
 	giveaway := Giveaway{
 		MessageID: messageID,
@@ -71,7 +72,7 @@ func rerollGiveaway(data *dcmd.Data) (interface{}, error) {
 	if err != nil {
 		return "Not a giveaway", nil
 	}
-	randomIndex := rand.Intn(len(giveaway.Participants))
+	randomIndex := r.Intn(len(giveaway.Participants))
 	member, err := bot.GetMember(giveaway.GuildID, giveaway.Participants[randomIndex])
 	if err != nil {
 		return "", err

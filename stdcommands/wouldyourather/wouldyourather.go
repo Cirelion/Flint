@@ -10,6 +10,7 @@ import (
 	"github.com/cirelion/flint/lib/discordgo"
 	"math/rand"
 	"strings"
+	"time"
 )
 
 type WouldYouRather struct {
@@ -18,8 +19,9 @@ type WouldYouRather struct {
 }
 
 func randomQuestion(questionString string) *WouldYouRather {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	questions := strings.Split(questionString, "\n")
-	question := strings.TrimSpace(questions[rand.Intn(len(questions))])
+	question := strings.TrimSpace(questions[r.Intn(len(questions))])
 	wyr := strings.Split(question, " - ")
 
 	if len(wyr) > 1 {

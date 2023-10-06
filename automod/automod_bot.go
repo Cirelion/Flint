@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cirelion/flint/commands"
 	"sort"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/cirelion/flint/automod/models"
 	"github.com/cirelion/flint/bot"
 	"github.com/cirelion/flint/bot/eventsystem"
-	"github.com/cirelion/flint/commands"
 	"github.com/cirelion/flint/common"
 	"github.com/cirelion/flint/common/scheduledevents2"
 	schEventsModels "github.com/cirelion/flint/common/scheduledevents2/models"
@@ -41,7 +41,7 @@ type ResetChannelRatelimitData struct {
 }
 
 func (p *Plugin) handleMsgUpdate(evt *eventsystem.EventData) {
-	p.checkMessage(evt, evt.MessageUpdate().Message)
+	//p.checkMessage(evt, evt.MessageUpdate().Message)
 }
 
 // called on new messages and edits
