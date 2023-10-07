@@ -194,6 +194,10 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 	message := &Message{MessageID: messageID}
 	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
 
+	if message.AuthorID == 0 {
+		return false, nil
+	}
+
 	member, _ := bot.GetMember(guildID, message.AuthorID)
 
 	embed, err := GenerateDeleteEmbed(session, guildID, message, member)

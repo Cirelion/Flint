@@ -261,7 +261,7 @@ func (p *PaginatedMessage) HandlePageButtonClick(ic *discordgo.InteractionCreate
 
 	_, err = common.BotSession.EditOriginalInteractionResponse(common.BotApplication.ID, ic.Token, &discordgo.WebhookParams{
 		Embeds:     []*discordgo.MessageEmbed{newMsg},
-		Components: createNavigationButtons(p.CurrentPage < 2, p.CurrentPage >= p.MaxPage),
+		Components: createNavigationButtons(newPage <= 1, nextButtonDisabled),
 	})
 
 	if err != nil {
