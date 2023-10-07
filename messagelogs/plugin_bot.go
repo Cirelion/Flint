@@ -194,10 +194,7 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 	message := &Message{MessageID: messageID}
 	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
 
-	member, err := bot.GetMember(guildID, message.AuthorID)
-	if err != nil {
-		return false, err
-	}
+	member, _ := bot.GetMember(guildID, message.AuthorID)
 
 	embed, err := GenerateDeleteEmbed(session, guildID, message, member)
 	if err != nil {
@@ -249,16 +246,19 @@ func IsIgnoredChannel(config *moderation.Config, channelID int64, channelCategor
 
 func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Message, member *dstate.MemberState) (*discordgo.MessageEmbed, error) {
 	embed := &discordgo.MessageEmbed{
-		Color: 0xd64848,
-		Author: &discordgo.MessageEmbedAuthor{
-			Name:    member.User.Username,
-			IconURL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
-		},
+		Color:       0xd64848,
 		Description: fmt.Sprintf("Message from <@%d> deleted in <#%d>.\nIt was sent on <t:%d:f>", message.AuthorID, message.ChannelID, message.CreatedAt.Unix()),
 		Timestamp:   time.Now().Format(time.RFC3339),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: fmt.Sprintf("User ID: %d", message.AuthorID),
 		},
+	}
+
+	if member != nil {
+		embed.Author = &discordgo.MessageEmbedAuthor{
+			Name:    member.User.Username,
+			IconURL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
+		}
 	}
 
 	if message.MessageReferenceID != 0 {
