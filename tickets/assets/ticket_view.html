@@ -22,13 +22,15 @@
 
 <script>
     const logContainer = document.querySelector("#log-container")
+    let transcriptEl = document.createElement("p");
+
     let logs = {{ .Ticket.Logs }};
     let explodedLogs = logs.split('[');
     let transcriptInfo = explodedLogs[0]
     let messages = []
-    let transcriptEl = document.createElement("p");
-    explodedLogs.shift()
+    let oldAuthor = ""
 
+    explodedLogs.shift()
     transcriptEl.innerHTML = transcriptInfo;
     logContainer.appendChild(transcriptEl)
 
@@ -36,11 +38,25 @@
         const para = document.createElement("p");
         const splitLog = explodedLog.split(': ')
         const author = splitLog[0].split('] ')[1]
-        const message = splitLog[1]
-        // const timestamp = splitLog[0].split(']')[0]
+
+        let message = splitLog[1]
+
+        if (splitLog.length > 2) {
+            splitLog.forEach((log, key) => {
+                if (key > 1) {
+                    message += ": " + log
+                }
+            })
+        }
 
         if (message !== "\n") {
-            para.innerHTML = "<b>" + author.split(" (")[0] + "</b><br/>" + message;
+            if (author.split(" (")[0] !== oldAuthor) {
+                oldAuthor = author.split(" (")[0]
+                para.innerHTML = "<div style='font-weight: bold; margin-top: 8px'>" + oldAuthor + "</div>"
+            }
+
+            para.innerHTML += message;
+            para.style = 'margin-bottom: 0;'
             logContainer.appendChild(para)
         }
     })
