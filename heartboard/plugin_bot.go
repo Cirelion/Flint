@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,7 +21,9 @@ var (
 	urlRegex = `https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
 )
 
-type Plugin struct{}
+type Plugin struct {
+	sync.RWMutex
+}
 
 func (p *Plugin) PluginInfo() *common.PluginInfo {
 	return &common.PluginInfo{
@@ -39,10 +42,10 @@ func RegisterPlugin() {
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
-	eventsystem.AddHandlerAsyncLastLegacy(p, handleReaction, eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
+	eventsystem.AddHandlerAsyncLastLegacy(p, p.handleReaction, eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
 }
 
-func handleReaction(evt *eventsystem.EventData) {
+func (p *Plugin) handleReaction(evt *eventsystem.EventData) {
 	var reaction *discordgo.MessageReaction
 
 	switch e := evt.EvtInterface.(type) {
@@ -66,7 +69,7 @@ func handleReaction(evt *eventsystem.EventData) {
 	if isValidChannel(channel, config) {
 		handleHeartBoard(config, channel, reaction)
 	} else if reaction.Emoji.Name == "⭐" || reaction.Emoji.Name == "❌" {
-		handleStarBoard(config, reaction)
+		p.handleStarBoard(config, reaction)
 	}
 }
 
@@ -101,13 +104,15 @@ func initMemberQuote(guildID int64, message *discordgo.Message) *MemberQuote {
 	return memberQuote
 }
 
-func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReaction) {
+func (p *Plugin) handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReaction) {
+	p.Lock()
 	starboardEmoji := "⭐"
 	message, err := common.BotSession.ChannelMessage(reaction.ChannelID, reaction.MessageID)
+	approval := handleCountApproval(message.Reactions, "⭐")
 	member, err := bot.GetMember(reaction.GuildID, reaction.UserID)
-
 	if err != nil {
 		logger.Error(err)
+		p.Unlock()
 		return
 	}
 
@@ -121,12 +126,11 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			memberQuote = initMemberQuote(reaction.GuildID, message)
 		}
 
-		memberQuote.Approval = handleCountApproval(message.Reactions, "⭐")
-
 		if memberQuote.StarBoardMessageID > 1 {
 			starboardMessage, starboardMessageErr := common.BotSession.ChannelMessage(config.StarBoardChannel, memberQuote.StarBoardMessageID)
 			if starboardMessageErr != nil {
 				logger.Error(starboardMessageErr)
+				p.Unlock()
 				return
 			}
 
@@ -134,6 +138,7 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			reactedXs, reactionsErr := common.BotSession.MessageReactions(starboardMessage.ChannelID, starboardMessage.ID, "❌", 0, 0, 0)
 			if reactionsErr != nil {
 				logger.Error(reactionsErr)
+				p.Unlock()
 				return
 			}
 
@@ -155,25 +160,22 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 				if err != nil {
 					logger.Error(err)
 				}
+				p.Unlock()
 				return
 			}
 
-			memberQuote.Approval = handleCountApproval(message.Reactions, "⭐") + handleCountApproval(starboardMessage.Reactions, "⭐")
+			approval = handleCountApproval(message.Reactions, "⭐") + handleCountApproval(starboardMessage.Reactions, "⭐")
 		}
 
-		err = common.GORM.Model(memberQuote).Find(memberQuote).Error
+		err = common.GORM.Model(&memberQuote).Find(memberQuote).Error
 		if err != nil {
 			logger.Error(err)
+			p.Unlock()
 			return
 		}
 
-		if handleCountApproval(message.Reactions, "⭐") > memberQuote.Approval && memberQuote.StarBoardMessageID <= 1 {
-			time.Sleep(time.Second * 5)
-			err = common.GORM.Model(memberQuote).Find(memberQuote).Error
-		}
-
-		if memberQuote.Approval >= config.StarBoardThreshold {
-			memberQuote.Approval = handleCountApproval(message.Reactions, "⭐")
+		if approval >= config.StarBoardThreshold {
+			memberQuote.Approval = approval
 			if memberQuote.StarBoardMessageID > 1 {
 				if memberQuote.Approval >= config.StarBoardThreshold*2 {
 					starboardEmoji = "🌟"
@@ -182,12 +184,14 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 				_, err = common.BotSession.ChannelMessageEditEmbed(config.StarBoardChannel, memberQuote.StarBoardMessageID, generateMemberQuoteEmbed(memberQuote, starboardEmoji))
 				if err != nil {
 					logger.Error(err)
+					p.Unlock()
 					return
 				}
 			} else {
 				embedMessage, embedMessageErr := common.BotSession.ChannelMessageSendEmbed(config.StarBoardChannel, generateMemberQuoteEmbed(memberQuote, starboardEmoji))
 				if embedMessageErr != nil {
 					logger.Error(embedMessageErr)
+					p.Unlock()
 					return
 				}
 
@@ -207,15 +211,16 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			err = common.BotSession.ChannelMessageDelete(config.StarBoardChannel, memberQuote.StarBoardMessageID)
 			if err != nil {
 				logger.Error(err)
+				p.Unlock()
 				return
 			}
-			logger.Warn("Trigger")
 			memberQuote.StarBoardMessageID = 1
 		}
 
 		err = common.GORM.Model(memberQuote).Update([]interface{}{memberQuote}).Error
 		if err != nil {
 			logger.Error(err)
+			p.Unlock()
 			return
 		}
 	} else if message.ChannelID == config.StarBoardChannel && !member.User.Bot {
@@ -223,12 +228,14 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		err = common.GORM.Model(memberQuote).Where("star_board_message_id = ?", reaction.MessageID).Find(memberQuote).Error
 		if err != nil {
 			logger.Error(err)
+			p.Unlock()
 			return
 		}
 
 		msg, msgErr := common.BotSession.ChannelMessage(memberQuote.ChannelID, memberQuote.MessageID)
 		if msgErr != nil {
 			logger.Error(msgErr)
+			p.Unlock()
 			return
 		}
 
@@ -236,6 +243,7 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		reactedXs, reactionsErr := common.BotSession.MessageReactions(memberQuote.ChannelID, memberQuote.MessageID, "❌", 0, 0, 0)
 		if reactionsErr != nil {
 			logger.Error(reactionsErr)
+			p.Unlock()
 			return
 		}
 
@@ -256,6 +264,7 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 			err = common.BotSession.MessageReactionRemove(message.ChannelID, memberQuote.StarBoardMessageID, reaction.Emoji.Name, reaction.UserID)
 			if err != nil {
 				logger.Error(err)
+				p.Unlock()
 				return
 			}
 		}
@@ -265,9 +274,11 @@ func handleStarBoard(config *moderation.Config, reaction *discordgo.MessageReact
 		err = common.GORM.Model(memberQuote).Update([]interface{}{memberQuote}).Error
 		if err != nil {
 			logger.Error(err)
+			p.Unlock()
 			return
 		}
 	}
+	p.Unlock()
 }
 
 func handleHeartBoard(config *moderation.Config, channel *dstate.ChannelState, reaction *discordgo.MessageReaction) {
