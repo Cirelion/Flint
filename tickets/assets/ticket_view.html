@@ -14,16 +14,36 @@
         <h4>{{ .Ticket.Title }}</h4>
         <h5>{{ .Ticket.Question}}</h5>
     </div>
-    <div class="col-lg-12" style="white-space: pre-line">
-        {{ .Ticket.Logs }}
+    <div class="col-lg-12">
+        <div id="log-container"></div>
     </div>
 </div>
 
 
 <script>
-    var logs = {{ .Ticket.Logs }};
+    const logContainer = document.querySelector("#log-container")
+    let logs = {{ .Ticket.Logs }};
+    let explodedLogs = logs.split('[');
+    let transcriptInfo = explodedLogs[0]
+    let messages = []
+    let transcriptEl = document.createElement("p");
+    explodedLogs.shift()
 
-    console.log("ticket", logs)
+    transcriptEl.innerHTML = transcriptInfo;
+    logContainer.appendChild(transcriptEl)
+
+    explodedLogs.forEach((explodedLog) => {
+        const para = document.createElement("p");
+        const splitLog = explodedLog.split(': ')
+        const author = splitLog[0].split('] ')[1]
+        const message = splitLog[1]
+        // const timestamp = splitLog[0].split(']')[0]
+
+        if (message !== "\n") {
+            para.innerHTML = "<b>" + author.split(" (")[0] + "</b><br/>" + message;
+            logContainer.appendChild(para)
+        }
+    })
 </script>
 {{template "cp_footer" .}}
 
