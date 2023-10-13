@@ -335,6 +335,7 @@ func DownloadFile(filePath string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	path := fileURL.Path
 	segments := strings.Split(path, "/")
 	fileName := segments[len(segments)-1]

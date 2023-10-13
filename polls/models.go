@@ -20,6 +20,21 @@ type PollMessage struct {
 	UpdatedAt time.Time
 }
 
+type ContestRound struct {
+	MessageID int64 `gorm:"primary_key"`
+	ChannelID int64
+	GuildID   int64 `gorm:"index"`
+
+	FirstPost  string
+	SecondPost string
+	Votes      []Vote `gorm:"foreignKey:PollMessageID;references:MessageID"`
+	Broken     bool
+	Active     *bool `sql:"DEFAULT:true"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type SelectMenuOption struct {
 	ID            int64 `gorm:"primary_key"`
 	PollMessageID int64

@@ -33,13 +33,30 @@ func (p *Plugin) PluginInfo() *common.PluginInfo {
 
 func RegisterPlugin() {
 	common.RegisterPlugin(&Plugin{})
-	common.GORM.AutoMigrate(&PollMessage{}, &SelectMenuOption{}, &Vote{})
+	common.GORM.AutoMigrate(&ContestRound{}, &PollMessage{}, &SelectMenuOption{}, &Vote{})
 }
 
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
 	eventsystem.AddHandlerAsyncLastLegacy(p, handleInteractionCreate, eventsystem.EventInteractionCreate)
+
+	rows, err := common.GORM.Model(&ContestRound{}).Where("active = ?", common.BoolToPointer(true)).Rows()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	for rows.Next() {
+		var contestRound ContestRound
+		err = common.GORM.ScanRows(rows, &contestRound)
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		go contestRound.handleContestTimer()
+	}
 }
 
 func (p *Plugin) AddCommands() {
@@ -47,6 +64,7 @@ func (p *Plugin) AddCommands() {
 		Poll,
 		StrawPoll,
 		EndPoll,
+		StartContestRound,
 	)
 }
 
@@ -63,7 +81,7 @@ func handleInteractionCreate(evt *eventsystem.EventData) {
 	customID := ic.MessageComponentData().CustomID
 
 	if customID == pollNay || customID == pollYay || customID == strawPollSelect {
-		var vote []string
+		var votes []string
 		var err error
 
 		poll := &PollMessage{
@@ -78,21 +96,52 @@ func handleInteractionCreate(evt *eventsystem.EventData) {
 
 		switch customID {
 		case pollYay:
-			vote = append(vote, "0")
-			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+			votes = append(votes, "0")
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(votes, ", ")})
 		case pollNay:
-			vote = append(vote, "1")
-			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+			votes = append(votes, "1")
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(votes, ", ")})
 		case strawPollSelect:
-			var votes []string
 			values := ic.Data.(discordgo.MessageComponentInteractionData).Values
 
 			for _, value := range values {
 				votes = append(votes, value)
 			}
-			vote = append(vote, votes...)
-			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(vote, ", ")})
+
+			handleVote(ic, Vote{PollMessageID: poll.MessageID, UserID: ic.Member.User.ID, Vote: strings.Join(votes, ", ")})
 		}
+	} else if strings.Contains(customID, "contest_round") {
+		contestRound := &ContestRound{
+			MessageID: ic.Message.ID,
+		}
+
+		err := common.GORM.Model(contestRound).First(contestRound).Error
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+
+		handleContestRoundVote(ic, Vote{PollMessageID: contestRound.MessageID, UserID: ic.Member.User.ID, Vote: customID})
+	}
+}
+
+func handleContestRoundVote(ic *discordgo.InteractionCreate, vote Vote) {
+	if ic.Member != nil && ic.Member.User.ID == common.BotUser.ID {
+		return
+	}
+
+	if ic.User != nil && ic.User.ID == common.BotUser.ID {
+		return
+	}
+
+	contestRound := &ContestRound{
+		MessageID: ic.Message.ID,
+	}
+	err := common.GORM.Model(&contestRound).Preload("Votes").First(&contestRound).Error
+	if err != nil {
+		logger.Error(err)
+	} else {
+		contestRound.HandleVoteButtonClick(ic, vote)
 	}
 }
 
@@ -113,6 +162,54 @@ func handleVote(ic *discordgo.InteractionCreate, vote Vote) {
 		logger.Error(err)
 	} else {
 		poll.HandleVoteButtonClick(ic, vote)
+	}
+}
+
+func (c ContestRound) HandleVoteButtonClick(ic *discordgo.InteractionCreate, vote Vote) {
+	err := common.BotSession.CreateInteractionResponse(ic.ID, ic.Token, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	var votes []Vote
+	var repeat = false
+
+	if len(c.Votes) > 0 {
+		for _, value := range c.Votes {
+			if value.UserID != vote.UserID {
+				votes = append(votes, value)
+			} else if reflect.DeepEqual(value.Vote, vote.Vote) {
+				repeat = true
+				err = common.GORM.Model(&c).Association("Votes").Delete(&vote).Error
+			}
+		}
+	}
+
+	if !repeat {
+		votes = append(votes, vote)
+	}
+
+	if err != nil && err != ErrNoResults {
+		logger.WithError(err).WithField("guild", c.GuildID).Error("failed setting vote")
+		return
+	}
+
+	c.Votes = votes
+
+	ic.Message.Embeds[2] = generateContestRoundPollEmbed(ic.Message.Embeds[2].Title, c.FirstPost, c.SecondPost, votes, c.CreatedAt.Add(time.Hour*24), false)
+	_, _ = common.BotSession.ChannelMessageEditEmbedList(ic.ChannelID, ic.Message.ID, ic.Message.Embeds)
+
+	err = common.GORM.Model(&c).Update(&c).Error
+	if err != nil {
+		switch code, _ := common.DiscordError(err); code {
+		case discordgo.ErrCodeUnknownChannel, discordgo.ErrCodeUnknownMessage, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions:
+			c.Broken = true
+		default:
+			logger.WithError(err).WithField("guild", c.GuildID).Error("failed updating contest round message")
+		}
 	}
 }
 
@@ -173,6 +270,35 @@ func (p *PollMessage) HandleVoteButtonClick(ic *discordgo.InteractionCreate, vot
 			p.Broken = true
 		default:
 			logger.WithError(err).WithField("guild", p.GuildID).Error("failed updating poll message")
+		}
+	}
+}
+
+func (c ContestRound) handleContestTimer() {
+	ticker := time.NewTicker(time.Minute * 1)
+
+	for {
+		<-ticker.C
+		if time.Since(c.CreatedAt) >= time.Hour*24 {
+			c.Active = common.BoolToPointer(false)
+			err := common.GORM.Model(&c).Preload("Votes").First(&c).Error
+			err = common.GORM.Model(&c).Update(c).Error
+			message, err := common.BotSession.ChannelMessage(c.ChannelID, c.MessageID)
+			message.Embeds[2] = generateContestRoundPollEmbed(message.Embeds[2].Title, c.FirstPost, c.SecondPost, c.Votes, c.CreatedAt.Add(time.Hour*24), true)
+
+			msgEdit := &discordgo.MessageEdit{
+				ID:         c.MessageID,
+				Channel:    c.ChannelID,
+				Embeds:     message.Embeds,
+				Components: []discordgo.MessageComponent{},
+			}
+
+			_, err = common.BotSession.ChannelMessageEditComplex(msgEdit)
+			if err != nil {
+				logger.WithError(err).WithField("guild", c.GuildID).Error("failed closing round")
+			}
+
+			ticker.Stop()
 		}
 	}
 }

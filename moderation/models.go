@@ -72,6 +72,10 @@ type Config struct {
 	HeartBoardThreshold int64         `gorm:"default:5" valid:"1,100"`
 	ShowcaseChannels    pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
+	// Contests
+	ContestChannel      int64 `valid:"channel,true"`
+	ContestRoundChannel int64 `valid:"channel,true"`
+
 	//On Duty
 	OnDutyRole                  string `valid:"role,true"`
 	OnDutyChannelOne            string `valid:"channel,true"`

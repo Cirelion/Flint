@@ -3,16 +3,21 @@ package polls
 import (
 	"emperror.dev/errors"
 	"fmt"
+	"github.com/cirelion/flint/bot"
 	"github.com/cirelion/flint/commands"
 	"github.com/cirelion/flint/common"
 	"github.com/cirelion/flint/lib/dcmd"
 	"github.com/cirelion/flint/lib/discordgo"
+	"github.com/cirelion/flint/lib/dstate"
+	"github.com/cirelion/flint/moderation"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
+	urlRegex      = `https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
 	pollReactions = [...]string{"1⃣", "2⃣", "3⃣", "4⃣", "5⃣", "6⃣", "7⃣", "8⃣", "9⃣", "🔟"}
 	Poll          = &commands.YAGCommand{
 		CmdCategory:               commands.CategoryTool,
@@ -57,6 +62,33 @@ var (
 		},
 		RunFunc: createStrawPoll,
 	}
+	StartContestRound = &commands.YAGCommand{
+		CmdCategory:               commands.CategoryTool,
+		Name:                      "ContestRound",
+		Description:               "Starts a contest between 2 participants",
+		RequiredArgs:              3,
+		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
+		RequiredDiscordPermsHelp:  "ManageMessages",
+		ApplicationCommandEnabled: true,
+		Arguments: []*dcmd.ArgDef{
+			{
+				Name: "Title",
+				Type: dcmd.String,
+				Help: "The title for the round. (Basic Contest, Round #1: Allie vs Lysandra.)",
+			},
+			{
+				Name: "FirstPost",
+				Type: dcmd.BigInt,
+				Help: "The ID of the first post for the contest round",
+			},
+			{
+				Name: "SecondPost",
+				Type: dcmd.BigInt,
+				Help: "The ID of the second post for the contest round",
+			},
+		},
+		RunFunc: startContestRound,
+	}
 	EndPoll = &commands.YAGCommand{
 		CmdCategory:               commands.CategoryTool,
 		Name:                      "End Poll",
@@ -68,6 +100,66 @@ var (
 		RunFunc:                   endPoll,
 	}
 )
+
+func startContestRound(data *dcmd.Data) (interface{}, error) {
+	config, err := moderation.GetConfig(data.GuildData.GS.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	roundTitle := data.Args[0].Str()
+	firstPost := data.GuildData.GS.GetThread(data.Args[1].Int64())
+	firstPostMessages, err := common.BotSession.ChannelMessages(firstPost.ID, 0, 0, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	secondPost := data.GuildData.GS.GetThread(data.Args[2].Int64())
+	secondPostMessages, err := common.BotSession.ChannelMessages(secondPost.ID, 0, 0, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	if data.TraditionalTriggerData != nil {
+		err = common.BotSession.ChannelMessageDelete(data.ChannelID, data.TraditionalTriggerData.Message.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	firstEmbed := generateContestRoundEmbed(firstPost, firstPostMessages[len(firstPostMessages)-1])
+	secondEmbed := generateContestRoundEmbed(secondPost, secondPostMessages[len(secondPostMessages)-1])
+	pollEmbed := generateContestRoundPollEmbed(roundTitle, firstPost.Name, secondPost.Name, []Vote{}, time.Now().Add(time.Hour*24), false)
+	firstPostCustomID := fmt.Sprintf("contest_round_%s", firstPost.Name)
+	secondPostCustomID := fmt.Sprintf("contest_round_%s", secondPost.Name)
+
+	msg, err := common.BotSession.ChannelMessageSendComplex(config.ContestRoundChannel, &discordgo.MessageSend{
+		Embeds: []*discordgo.MessageEmbed{firstEmbed, secondEmbed, pollEmbed},
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						Label:    firstPost.Name,
+						CustomID: firstPostCustomID,
+						Style:    discordgo.PrimaryButton,
+					},
+					discordgo.Button{
+						Label:    secondPost.Name,
+						CustomID: secondPostCustomID,
+						Style:    discordgo.PrimaryButton,
+					},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, errors.WrapIf(err, "failed to start contest round")
+	}
+
+	contestRound := &ContestRound{MessageID: msg.ID, ChannelID: msg.ChannelID, GuildID: msg.GuildID, FirstPost: firstPost.Name, SecondPost: secondPost.Name}
+	common.GORM.Model(contestRound).Save(contestRound)
+	go contestRound.handleContestTimer()
+	return "## May the best bot win.", nil
+}
 
 func endPoll(data *dcmd.Data) (interface{}, error) {
 	channelID := data.ChannelID
@@ -352,6 +444,86 @@ func StrawPollEmbed(question string, options []SelectMenuOption, author *discord
 	}
 
 	return &embed, nil
+}
+
+func generateContestRoundPollEmbed(roundTitle string, firstPost string, secondPost string, votes []Vote, timeStamp time.Time, ended bool) *discordgo.MessageEmbed {
+	totalVoteCount := len(votes)
+	firstVoteCount := 0
+	secondVoteCount := 0
+	firstVotePercentage := float64(0)
+	secondVotePercentage := float64(0)
+
+	if totalVoteCount > 0 {
+		for _, value := range votes {
+			customID := fmt.Sprintf("contest_round_%s", firstPost)
+			if value.Vote == customID {
+				firstVoteCount++
+			} else {
+				secondVoteCount++
+			}
+		}
+
+		if firstVoteCount > 0 {
+			firstVotePercentage = (float64(firstVoteCount) / float64(totalVoteCount)) * 100
+		}
+
+		if secondVoteCount > 0 {
+			secondVotePercentage = (float64(secondVoteCount) / float64(totalVoteCount)) * 100
+		}
+	}
+
+	description := fmt.Sprintf("**%s**: %d (%d%s)\n**%s**: %d (%d%s)", firstPost, firstVoteCount, int(firstVotePercentage), "%", secondPost, secondVoteCount, int(secondVotePercentage), "%")
+	footerText := "Round will end"
+
+	if ended {
+		description += "\n\n*Vote has ended*"
+		footerText = "Round ended"
+	} else {
+		description += "\n\n*Vote for your* favourite character below!"
+	}
+
+	return &discordgo.MessageEmbed{
+		Title:       roundTitle,
+		Description: description,
+		Timestamp:   timeStamp.Format(time.RFC3339),
+		Color:       13265188,
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: footerText,
+		},
+	}
+}
+
+func generateContestRoundEmbed(channel *dstate.ChannelState, message *discordgo.Message) *discordgo.MessageEmbed {
+	member, err := bot.GetMember(channel.GuildID, channel.OwnerID)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       channel.Name,
+		Description: message.Content,
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    fmt.Sprintf("Created by %s", bot.GetName(member)),
+			IconURL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
+		},
+	}
+
+	re, _ := regexp.Compile(urlRegex)
+	if re.MatchString(message.Content) {
+		embed.URL = re.FindString(message.Content)
+		embed.Description = strings.Replace(message.Content, embed.URL, "", -1)
+	}
+
+	if len(message.Attachments) > 0 {
+		embed.Image = &discordgo.MessageEmbedImage{
+			URL:      message.Attachments[0].URL,
+			ProxyURL: message.Attachments[0].ProxyURL,
+			Width:    message.Attachments[0].Width,
+			Height:   message.Attachments[0].Height,
+		}
+	}
+
+	return embed
 }
 
 func generateSelectMenuOptions(options []*dcmd.ParsedArg) []SelectMenuOption {

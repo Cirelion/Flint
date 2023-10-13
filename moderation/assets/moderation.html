@@ -611,6 +611,26 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
     </div>
 </div>
 <hr />
+<p>Contests</p>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="contest-channel">
+            <label>Contest channel</label><br>
+            <select class="multiselect" name="ContestChannel" data-plugin-multiselect>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.ContestChannel true "None"}}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group" id="contest-round-channel">
+            <label>Contest round channel</label><br>
+            <select class="multiselect" name="ContestRoundChannel" data-plugin-multiselect>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.ContestRoundChannel true "None"}}
+            </select>
+        </div>
+    </div>
+</div>
+<hr />
 
 <p>Configuration for the message deletion logs</p>
 <div class="row">
