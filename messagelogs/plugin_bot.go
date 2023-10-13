@@ -1,6 +1,7 @@
 package messagelogs
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/cirelion/flint/bot"
 	"github.com/cirelion/flint/bot/eventsystem"
@@ -160,7 +161,6 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 	if evt.GS == nil {
 		return false, nil
 	}
-
 	config, err := moderation.GetConfig(evt.GS.ID)
 	if evt.Type == eventsystem.EventMessageDelete {
 		msg := evt.MessageDelete()
@@ -193,7 +193,6 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogChannelID int64, messageID int64) (retry bool, err error) {
 	message := &Message{MessageID: messageID}
 	err = common.GORM.Model(&message).Preload("Attachments").First(&message).Error
-
 	if message.AuthorID == 0 {
 		return false, nil
 	}
@@ -205,6 +204,7 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 		return false, err
 	}
 	messageSend := &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}}
+
 	var fileName string
 	if len(message.Attachments) == 1 {
 		fileName = DownloadFile(message.Attachments[0].Url)
@@ -214,6 +214,17 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 		}
 
 		messageSend.Files = []*discordgo.File{{Name: fileName, Reader: file}}
+	}
+
+	if len(message.Content) > 1024 {
+		var buf bytes.Buffer
+		buf.WriteString(message.Content)
+
+		files := []*discordgo.File{
+			{Name: "Message content.txt", ContentType: "text/plain", Reader: &buf},
+		}
+
+		messageSend.Files = append(messageSend.Files, files...)
 	}
 
 	_, err = common.BotSession.ChannelMessageSendComplex(deleteLogChannelID, messageSend)
@@ -274,10 +285,17 @@ func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Mes
 	}
 
 	if message.Content != "" {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:  "Message Content",
-			Value: message.Content,
-		})
+		if len(message.Content) > 1024 {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:  "Message Content",
+				Value: "Content exceeds 1024 in length, see attached file.",
+			})
+		} else {
+			embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+				Name:  "Message Content",
+				Value: message.Content,
+			})
+		}
 	}
 
 	if len(message.Attachments) == 1 {

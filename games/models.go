@@ -4,6 +4,17 @@ import (
 	"time"
 )
 
+type DuelState int
+
+var (
+	DuelInactive    DuelState = 0
+	DuelAccepted    DuelState = 1
+	DuelActive      DuelState = 2
+	DuelMissedShot  DuelState = 3
+	DuelMissedShots DuelState = 4
+	DuelEnded       DuelState = 99
+)
+
 type Player struct {
 	UserID  int64 `gorm:"primary_key" json:"user_id"`
 	GuildID int64 `gorm:"index"`
@@ -29,13 +40,12 @@ type Duel struct {
 	WinnerID     int64 `json:"winner_id"`
 	GuildID      int64 `gorm:"index"`
 
-	Active    bool
-	Accepted  bool
+	DuelState DuelState `json:"duel_state"`
 	Bet       int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 func (o Duel) TableName() string {
-	return "duel"
+	return "duels"
 }

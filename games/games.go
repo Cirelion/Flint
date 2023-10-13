@@ -90,20 +90,25 @@ var (
 )
 
 func fire(data *dcmd.Data) (interface{}, error) {
-	winningMember, _ := bot.GetMember(data.GuildData.GS.ID, data.Author.ID)
 	duel := &Duel{}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	percentage := 1 + r.Intn(10-1)
+	randomIndex := r.Intn(len(misses))
 
-	err := common.GORM.Model(Duel{ChallengedID: data.Author.ID}).Where("winner_id = ?", 0).Where("active = ?", true).Last(duel, "challenged_id = ?", data.Author.ID).Error
+	err := common.GORM.Model(Duel{ChallengedID: data.Author.ID}).Where("duel_state != ?", DuelEnded).Last(duel, "challenged_id = ?", data.Author.ID).Error
 	if err != nil {
-		err = common.GORM.Model(Duel{ChallengerID: data.Author.ID}).Where("winner_id = ?", 0).Where("active = ?", true).Last(duel, "challenger_id = ?", data.Author.ID).Error
+		err = common.GORM.Model(Duel{ChallengerID: data.Author.ID}).Where("duel_state != ?", DuelEnded).Last(duel, "challenger_id = ?", data.Author.ID).Error
 		if err != nil {
-			return "Shot too early, you missed!", nil
+			return nil, nil
 		}
 	}
 
-	if !duel.Accepted {
-		return "Don't cheat mf", nil
+	if duel.DuelState < DuelAccepted {
+		return "Don't cheat mf.", nil
+	}
+
+	if duel.DuelState < DuelActive {
+		return fmt.Sprintf("Shot too early, %s missed!", data.Author.Mention()), nil
 	}
 
 	winningPlayer := &Player{UserID: data.Author.ID}
@@ -111,26 +116,27 @@ func fire(data *dcmd.Data) (interface{}, error) {
 	if winningPlayer.UserID == duel.ChallengerID {
 		losingPlayer.UserID = duel.ChallengedID
 	}
-	percentage := 1 + r.Intn(10-1)
+	winningMember, _ := bot.GetMember(data.GuildData.GS.ID, data.Author.ID)
+	losingMember, _ := bot.GetMember(duel.GuildID, losingPlayer.UserID)
 
 	if percentage <= 6 {
-		err = common.GORM.Model(duel).Update(map[string]interface{}{"winner_id": data.Author.ID}).Error
+		duel.WinnerID = data.Author.ID
+		duel.DuelState = DuelEnded
+
+		err = common.GORM.Model(duel).Update(duel).Error
 		common.GORM.Model(&winningPlayer).First(&winningPlayer)
 		common.GORM.Model(&losingPlayer).First(&losingPlayer)
 
 		if duel.Bet > 0 {
-			losingMember, _ := bot.GetMember(duel.GuildID, losingPlayer.UserID)
 			common.GORM.Model(&winningPlayer).Updates(map[string]interface{}{"screws_received": winningPlayer.ScrewsReceived + duel.Bet, "screw_count": winningPlayer.ScrewCount + duel.Bet})
 			common.GORM.Model(&losingPlayer).Updates(map[string]interface{}{"screws_given": losingPlayer.ScrewsGiven + duel.Bet, "screw_count": losingPlayer.ScrewCount - duel.Bet})
 
 			return fmt.Sprintf("Shot %s and took %d <:tempscrewplschangelater:1156155400509464606>", losingMember.User.Mention(), duel.Bet), nil
 		}
 
-		randomIndex := r.Intn(len(wins))
 		return fmt.Sprintf("%s, %s (hit)", winningMember.User.Mention(), wins[randomIndex]), nil
 	}
 
-	randomIndex := r.Intn(len(misses))
 	return fmt.Sprintf("%s, %s (miss)", winningMember.User.Mention(), misses[randomIndex]), nil
 }
 
@@ -159,7 +165,8 @@ func handleDuelTimer(channelID int64, duel *Duel) {
 			common.BotSession.ChannelMessageEdit(channelID, msg.ID, fmt.Sprintf("%d...", timer))
 			timer--
 		} else {
-			err = common.GORM.Model(duel).Update(map[string]interface{}{"active": true}).Error
+			duel.DuelState = DuelActive
+			err = common.GORM.Model(duel).Update(duel).Error
 			if err != nil {
 				log.Error(err)
 				ticker.Stop()
@@ -199,11 +206,11 @@ func acceptDuel(data *dcmd.Data) (interface{}, error) {
 		}
 	}
 
-	if duel.Accepted {
+	if duel.DuelState != DuelInactive {
 		return "Duel is already accepted.", nil
 	}
 
-	err = common.GORM.Model(duel).Update(map[string]interface{}{"accepted": true}).Error
+	err = common.GORM.Model(duel).Update("duel_state", DuelAccepted).Error
 	if err != nil {
 		return nil, err
 	}
@@ -216,11 +223,12 @@ func acceptDuel(data *dcmd.Data) (interface{}, error) {
 
 	if duel.ChallengedID != data.Author.ID {
 		member, _ := bot.GetMember(duel.GuildID, duel.ChallengedID)
-		err = common.GORM.Model(duel).Update(map[string]interface{}{"challenged_id": data.Author.ID}).Error
+		err = common.GORM.Model(duel).Update("challenged_id", data.Author.ID).Error
 
 		return fmt.Sprintf("%s has stolen %s's challenge from %s! Use -fire after I say!", data.Author.Mention(), user.Mention(), member.User.Mention()), nil
 	} else {
-		return fmt.Sprintf("%s has accepted %s's challenge! Use -fire after I say!", data.Author.Mention(), user.Mention()), nil
+		member, _ := bot.GetMember(duel.GuildID, duel.ChallengerID)
+		return fmt.Sprintf("%s has accepted %s's challenge! Use -fire after I say!", data.Author.Mention(), member.User.Mention()), nil
 	}
 }
 
