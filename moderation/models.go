@@ -62,6 +62,8 @@ type Config struct {
 	// Message logs
 	EditLogChannel   string        `valid:"channel,true"`
 	DeleteLogChannel string        `valid:"channel,true"`
+	ModLogChannel    string        `valid:"channel,true"`
+	ModChannels      pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 	IgnoreChannels   pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 	IgnoreCategories pq.Int64Array `gorm:"type:bigint[]" valid:"channel,true"`
 
@@ -149,6 +151,11 @@ func (c *Config) IntEditLogChannel() (r int64) {
 
 func (c *Config) IntDeleteLogChannel() (r int64) {
 	r, _ = strconv.ParseInt(c.DeleteLogChannel, 10, 64)
+	return
+}
+
+func (c *Config) IntModLogChannel() (r int64) {
+	r, _ = strconv.ParseInt(c.ModLogChannel, 10, 64)
 	return
 }
 

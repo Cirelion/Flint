@@ -641,10 +641,18 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
                 {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.IgnoreChannels}}
             </select>
         </div>
+
         <div class="form-group" id="message-ignore-categories">
             <label>Don't log messages in these categories</label><br>
             <select class="multiselect" name="IgnoreCategories" data-plugin-multiselect multiple="multiple">
                 {{catChannelOptionsMulti .ActiveGuild.Channels .ModConfig.IgnoreCategories}}
+            </select>
+        </div>
+
+        <div class="form-group" id="message-mod-channels">
+            <label>Moderation log channels</label><br>
+            <select class="multiselect" name="ModChannels" data-plugin-multiselect multiple="multiple">
+                {{textChannelOptionsMulti .ActiveGuild.Channels .ModConfig.ModChannels}}
             </select>
         </div>
     </div>
@@ -660,6 +668,13 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
             <label>Channel to log deleted messages</label>
             <select class="form-control" name="DeleteLogChannel" data-requireperms-embed>
                 {{textChannelOptions .ActiveGuild.Channels .ModConfig.DeleteLogChannel true "None"}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Channel to log mod logs</label>
+            <select class="form-control" name="ModLogChannel" data-requireperms-embed>
+                {{textChannelOptions .ActiveGuild.Channels .ModConfig.ModLogChannel true "None"}}
             </select>
         </div>
     </div>

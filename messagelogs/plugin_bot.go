@@ -92,9 +92,14 @@ func HandleMsgUpdate(evt *eventsystem.EventData) (retry bool, err error) {
 	}
 
 	channelCategory := evt.GS.GetChannelOrThread(msg.ChannelID).ParentID
+	logChannel := config.IntEditLogChannel()
 
 	if IsIgnoredChannel(config, msg.ChannelID, channelCategory) {
 		return false, nil
+	}
+
+	if IsModChannel(config, msg.ChannelID, channelCategory) {
+		logChannel = config.IntModLogChannel()
 	}
 
 	message := &Message{MessageID: msg.ID}
@@ -152,7 +157,7 @@ func HandleMsgUpdate(evt *eventsystem.EventData) (retry bool, err error) {
 		}
 	}
 
-	_, err = common.BotSession.ChannelMessageSendEmbed(config.IntEditLogChannel(), embed)
+	_, err = common.BotSession.ChannelMessageSendEmbed(logChannel, embed)
 
 	return false, err
 }
@@ -162,6 +167,8 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 		return false, nil
 	}
 	config, err := moderation.GetConfig(evt.GS.ID)
+	logChannel := config.IntDeleteLogChannel()
+
 	if evt.Type == eventsystem.EventMessageDelete {
 		msg := evt.MessageDelete()
 		if msg.ID == 0 {
@@ -173,7 +180,11 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 			return false, nil
 		}
 
-		_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, config.IntDeleteLogChannel(), msg.ID)
+		if IsModChannel(config, msg.ChannelID, channelCategory) {
+			logChannel = config.IntModLogChannel()
+		}
+
+		_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, logChannel, msg.ID)
 	} else if evt.Type == eventsystem.EventMessageDeleteBulk {
 		messageDeleteBulk := evt.MessageDeleteBulk()
 		channelCategory := evt.GS.GetChannelOrThread(messageDeleteBulk.ChannelID).ParentID
@@ -182,8 +193,12 @@ func HandleMsgDelete(evt *eventsystem.EventData) (retry bool, err error) {
 			return false, nil
 		}
 
+		if IsModChannel(config, messageDeleteBulk.ChannelID, channelCategory) {
+			logChannel = config.IntModLogChannel()
+		}
+
 		for _, msg := range messageDeleteBulk.Messages {
-			_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, config.IntDeleteLogChannel(), msg)
+			_, err = DeleteAndLogMessages(evt.Session, evt.GS.ID, logChannel, msg)
 		}
 	}
 
@@ -257,6 +272,16 @@ func IsIgnoredChannel(config *moderation.Config, channelID int64, channelCategor
 	}
 
 	return common.ContainsInt64Slice(config.IgnoreChannels, channelID)
+}
+
+func IsModChannel(config *moderation.Config, channelID int64, channelCategory int64) bool {
+	if channelCategory != 0 {
+		if common.ContainsInt64Slice(config.ModChannels, channelCategory) {
+			return true
+		}
+	}
+
+	return common.ContainsInt64Slice(config.ModChannels, channelID)
 }
 
 func GenerateDeleteEmbed(session *discordgo.Session, guildID int64, message *Message, member *dstate.MemberState) (*discordgo.MessageEmbed, error) {
