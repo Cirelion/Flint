@@ -4,6 +4,7 @@ package reddit
 
 import (
 	"context"
+	"github.com/cirelion/flint/lib/go-reddit"
 	"strconv"
 	"strings"
 	"sync"

@@ -3,6 +3,7 @@ package reddit
 import (
 	"context"
 	"fmt"
+	"github.com/cirelion/flint/lib/go-reddit"
 	"html"
 	"os"
 	"strconv"
@@ -199,7 +200,7 @@ func (p *PostHandlerImpl) handlePost(post *reddit.Link, filterGuild int64) error
 	for _, item := range filteredItems {
 		idStr := strconv.FormatInt(item.ID, 10)
 
-		webhookUsername := "Reddit • YAGPDB"
+		webhookUsername := "Reddit • Flint"
 
 		qm := &mqueue.QueuedElement{
 			GuildID:         item.GuildID,

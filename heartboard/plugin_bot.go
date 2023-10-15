@@ -9,6 +9,7 @@ import (
 	"github.com/cirelion/flint/lib/dstate"
 	"github.com/cirelion/flint/moderation"
 	"math/rand"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -42,7 +43,65 @@ func RegisterPlugin() {
 var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
+	eventsystem.AddHandlerAsyncLast(p, p.handleThreadCreate, eventsystem.EventThreadCreate)
 	eventsystem.AddHandlerAsyncLastLegacy(p, p.handleReaction, eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
+}
+
+func (p *Plugin) handleThreadCreate(evt *eventsystem.EventData) (retry bool, err error) {
+	if evt.GS == nil {
+		return false, nil
+	}
+
+	config, err := moderation.GetConfig(evt.GS.ID)
+	if err != nil {
+		return false, err
+	}
+
+	thread := evt.ThreadCreate()
+
+	if thread.LastMessageID == 0 && slices.Contains(config.ShowcaseChannels, thread.ParentID) {
+		var websiteUrl string
+		label := fmt.Sprintf("Chat with %s", thread.Name)
+
+		if len(label) > 80 {
+			label = "Chat with the character"
+		}
+
+		message, messageErr := evt.Session.ChannelMessage(thread.ID, thread.ID)
+		if messageErr != nil {
+			return true, messageErr
+		}
+
+		re, _ := regexp.Compile(urlRegex)
+		if re.MatchString(message.Content) {
+			websiteUrl = re.FindString(message.Content)
+		}
+
+		if websiteUrl == "" {
+			websiteUrl = fmt.Sprintf("https://www.unhinged.ai/search?query=%s", url.QueryEscape(thread.Name))
+		}
+
+		_, err = evt.Session.ChannelMessageSendComplex(thread.ID, &discordgo.MessageSend{
+			Content: "Click the button to chat!",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Style: discordgo.LinkButton,
+							URL:   websiteUrl,
+							Label: label,
+						},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return false, nil
 }
 
 func (p *Plugin) handleReaction(evt *eventsystem.EventData) {

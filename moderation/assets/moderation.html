@@ -587,7 +587,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
         <div class="form-group">
             <label>Heart board reaction threshold</label>
             <input type="number" min="1" max="100" name="HeartBoardThreshold" class="form-control"
-                   value="{{.ModConfig.HeartBoardThreshold}}">
+                   value="{{or .ModConfig.HeartBoardThreshold 1}}">
         </div>
         <div class="form-group" id="showcase-channels">
             <label>Showcase channels</label><br>
@@ -606,7 +606,7 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
         <div class="form-group">
             <label>Starboard reaction threshold</label>
             <input type="number" min="1" max="100" name="StarBoardThreshold" class="form-control"
-                   value="{{.ModConfig.StarBoardThreshold}}">
+                   value="{{or .ModConfig.StarBoardThreshold 1}}">
         </div>
     </div>
 </div>

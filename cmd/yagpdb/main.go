@@ -15,6 +15,7 @@ import (
 	"github.com/cirelion/flint/lib/confusables"
 	"github.com/cirelion/flint/messagelogs"
 	"github.com/cirelion/flint/polls"
+	"github.com/cirelion/flint/reddit"
 	"github.com/cirelion/flint/tickets"
 	"github.com/cirelion/flint/web/discorddata"
 
@@ -74,6 +75,7 @@ func main() {
 	logs.RegisterPlugin()
 	messagelogs.RegisterPlugin()
 	autorole.RegisterPlugin()
+	reddit.RegisterPlugin()
 	tickets.RegisterPlugin()
 	verification.RegisterPlugin()
 	premium.RegisterPlugin()

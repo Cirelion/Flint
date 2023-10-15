@@ -180,9 +180,9 @@ func (p *PostFetcher) GetNewPosts() ([]*greddit.Link, error) {
 		common.RedisPool.Do(radix.FlatCmd(nil, "SET", p.LastScannedPostIDKey, highestID))
 	}
 
-	if !p.hasCaughtUp {
-		logrus.Info("Redditfeed processed ", len(resp), " links")
-	}
+	//if !p.hasCaughtUp {
+	//	logrus.Info("Redditfeed processed ", len(resp), " links")
+	//}
 
 	if len(resp) < 50 && !p.hasCaughtUp {
 		logrus.Info("Reddit feed caught up in ", time.Since(p.started).String())

@@ -58,13 +58,7 @@ func updateOnDutyChannelDescriptions() {
 	for _, guild := range guilds {
 		firstRow := true
 		conf := Config{}
-
-		err = common.GORM.Where("guild_id = ?", guild.ID).Table("moderation_configs").First(&conf).Error
-		if err != nil {
-			logger.Error(err)
-			return
-		}
-
+		err = common.GORM.Table("moderation_configs").Where("guild_id = ?", guild.ID).First(&conf).Error
 		if err != nil {
 			logger.Error(err)
 			return
@@ -75,89 +69,91 @@ func updateOnDutyChannelDescriptions() {
 		onDutyChannelTwo, _ := strconv.ParseInt(conf.OnDutyChannelTwo, 10, 64)
 		memberList := " - Staff on duty: "
 
-		for rows.Next() {
-			var onDuty OnDuty
-			err = common.GORM.ScanRows(rows, &onDuty)
-			if err != nil {
-				logger.Error(err)
-				return
-			}
-
-			member, memberErr := GetMember(guild.ID, int64(onDuty.UserID))
-			if memberErr != nil {
-				logger.Error(memberErr)
-				return
-			}
-
-			if !onDuty.OnDuty && common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
-				err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", true).Error
-				err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty_set_at", time.Now()).Error
-				onDuty.OnDuty = true
-
+		if onDutyChannelOne != 0 {
+			for rows.Next() {
+				var onDuty OnDuty
+				err = common.GORM.ScanRows(rows, &onDuty)
 				if err != nil {
 					logger.Error(err)
-					return
-				}
-			}
-
-			if onDuty.OnDuty {
-				if !common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
-					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
 					continue
-				} else if time.Since(onDuty.OnDutySetAt) > onDuty.OnDutyDuration {
-					err = common.BotSession.GuildMemberRoleRemove(guild.ID, member.User.ID, OnDutyRole)
-					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
-					if err != nil {
-						logger.Error(err)
-						return
-					}
+				}
 
-					err = SendDM(int64(onDuty.UserID), fmt.Sprintf("You have been automatically been set Off Duty after %s", common.HumanizeDuration(common.DurationPrecisionHours, onDuty.OnDutyDuration)))
+				member, memberErr := GetMember(guild.ID, int64(onDuty.UserID))
+				if memberErr != nil {
+					logger.Error(memberErr)
+					continue
+				}
+
+				if !onDuty.OnDuty && common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
+					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", true).Error
+					err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty_set_at", time.Now()).Error
+					onDuty.OnDuty = true
+
 					if err != nil {
 						logger.Error(err)
-						return
+						continue
 					}
-				} else {
-					if firstRow {
-						firstRow = false
-						memberList += GetName(member)
+				}
+
+				if onDuty.OnDuty {
+					if !common.ContainsInt64Slice(member.Member.Roles, OnDutyRole) {
+						err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
+						continue
+					} else if time.Since(onDuty.OnDutySetAt) > onDuty.OnDutyDuration {
+						err = common.BotSession.GuildMemberRoleRemove(guild.ID, member.User.ID, OnDutyRole)
+						err = common.GORM.Table("on_duty").Where("user_id = ?", member.User.ID).Update("on_duty", false).Error
+						if err != nil {
+							logger.Error(err)
+							continue
+						}
+
+						err = SendDM(int64(onDuty.UserID), fmt.Sprintf("You have been automatically been set Off Duty after %s", common.HumanizeDuration(common.DurationPrecisionHours, onDuty.OnDutyDuration)))
+						if err != nil {
+							logger.Error(err)
+							continue
+						}
 					} else {
-						memberList += ", " + GetName(member)
+						if firstRow {
+							firstRow = false
+							memberList += GetName(member)
+						} else {
+							memberList += ", " + GetName(member)
+						}
 					}
 				}
 			}
-		}
 
-		err = rows.Close()
-		if err != nil {
-			return
-		}
+			err = rows.Close()
+			if err != nil {
+				continue
+			}
 
-		channel, channelErr := common.BotSession.Channel(onDutyChannelOne)
-		if channelErr != nil {
-			logger.Error(channelErr)
-			return
-		}
-
-		if memberList == " - Staff on duty: " {
-			memberList += "None"
-		}
-
-		if channel.Topic != conf.OnDutyChannelOneDescription+memberList {
-			_, channelErr = common.BotSession.ChannelEditComplex(onDutyChannelOne, &discordgo.ChannelEdit{
-				Topic: conf.OnDutyChannelOneDescription + memberList,
-			})
+			channel, channelErr := common.BotSession.Channel(onDutyChannelOne)
 			if channelErr != nil {
 				logger.Error(channelErr)
-				return
+				continue
 			}
-			if onDutyChannelTwo != 0 {
-				_, channelErr = common.BotSession.ChannelEditComplex(onDutyChannelTwo, &discordgo.ChannelEdit{
-					Topic: conf.OnDutyChannelTwoDescription + memberList,
+
+			if memberList == " - Staff on duty: " {
+				memberList += "None"
+			}
+
+			if channel.Topic != conf.OnDutyChannelOneDescription+memberList {
+				_, channelErr = common.BotSession.ChannelEditComplex(onDutyChannelOne, &discordgo.ChannelEdit{
+					Topic: conf.OnDutyChannelOneDescription + memberList,
 				})
 				if channelErr != nil {
 					logger.Error(channelErr)
-					return
+					continue
+				}
+				if onDutyChannelTwo != 0 {
+					_, channelErr = common.BotSession.ChannelEditComplex(onDutyChannelTwo, &discordgo.ChannelEdit{
+						Topic: conf.OnDutyChannelTwoDescription + memberList,
+					})
+					if channelErr != nil {
+						logger.Error(channelErr)
+						continue
+					}
 				}
 			}
 		}
