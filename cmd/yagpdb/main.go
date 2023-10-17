@@ -14,6 +14,7 @@ import (
 	"github.com/cirelion/flint/heartboard"
 	"github.com/cirelion/flint/lib/confusables"
 	"github.com/cirelion/flint/messagelogs"
+	"github.com/cirelion/flint/pissening"
 	"github.com/cirelion/flint/polls"
 	"github.com/cirelion/flint/reddit"
 	"github.com/cirelion/flint/tickets"
@@ -54,6 +55,7 @@ func main() {
 	applications.RegisterPlugin()
 	polls.RegisterPlugin()
 	giveaways.RegisterPlugin()
+	pissening.RegisterPlugin()
 	games.RegisterPlugin()
 	heartboard.RegisterPlugin()
 	paginatedmessages.RegisterPlugin()
