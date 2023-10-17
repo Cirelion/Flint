@@ -2,6 +2,7 @@ package moderation
 
 import (
 	"fmt"
+	"github.com/cirelion/flint/bot"
 	"regexp"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ var (
 	MAClearWarnings  = ModlogAction{Prefix: "Cleared warnings", Emoji: "👌", Color: 0x62c65f}
 )
 
-func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target *discordgo.User, reason string, logLink string, proof string, duration time.Duration) *discordgo.MessageEmbed {
+func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target *discordgo.User, reason string, logLink string, proof string, duration time.Duration, guildID int64) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title: fmt.Sprintf("User %s", action.Prefix),
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
@@ -64,8 +65,9 @@ func generateGenericModEmbed(action ModlogAction, author *discordgo.User, target
 	}
 
 	if !author.Bot {
+		member, _ := bot.GetMember(guildID, author.ID)
 		embed.Footer = &discordgo.MessageEmbedFooter{
-			Text:    fmt.Sprintf("Action taken by %s", author.Globalname),
+			Text:    fmt.Sprintf("Action taken by %s", bot.GetName(member)),
 			IconURL: discordgo.EndpointUserAvatar(author.ID, author.Avatar),
 		}
 	}
@@ -79,7 +81,7 @@ func CreateModlogEmbed(config *Config, author *discordgo.User, action ModlogActi
 	if channelID == 0 {
 		return nil
 	}
-	embed := generateGenericModEmbed(action, author, target, reason, logLink, proof, duration)
+	embed := generateGenericModEmbed(action, author, target, reason, logLink, proof, duration, config.GuildID)
 	_, err := common.BotSession.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
 		if common.IsDiscordErr(err, discordgo.ErrCodeMissingAccess, discordgo.ErrCodeMissingPermissions, discordgo.ErrCodeUnknownChannel) {

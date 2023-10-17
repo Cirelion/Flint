@@ -235,7 +235,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MABanned, parsed.Author, target, reason, "", "", banDuration), nil
+			return generateGenericModEmbed(MABanned, parsed.Author, target, reason, "", "", banDuration, config.GuildID), nil
 		},
 	},
 	{
@@ -292,7 +292,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAUnbanned, parsed.Author, target, reason, "", "", 0), nil
+			return generateGenericModEmbed(MAUnbanned, parsed.Author, target, reason, "", "", 0, config.GuildID), nil
 		},
 	},
 	{
@@ -362,7 +362,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAKick, parsed.Author, target, reason, "", "", -1), nil
+			return generateGenericModEmbed(MAKick, parsed.Author, target, reason, "", "", -1, config.GuildID), nil
 		},
 	},
 	{
@@ -432,7 +432,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			}
 
 			common.BotSession.GuildMemberMove(parsed.GuildData.GS.ID, target.ID, 0)
-			return generateGenericModEmbed(MAMute, parsed.Author, target, reason, "", "", d), nil
+			return generateGenericModEmbed(MAMute, parsed.Author, target, reason, "", "", d, config.GuildID), nil
 		},
 	},
 	{
@@ -487,7 +487,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAUnmute, parsed.Author, target, reason, "", "", -1), nil
+			return generateGenericModEmbed(MAUnmute, parsed.Author, target, reason, "", "", -1, config.GuildID), nil
 		},
 	},
 	{
@@ -549,7 +549,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return generateGenericModEmbed(MATimeoutAdded, parsed.Author, target, reason, "", "", d), nil
+			return generateGenericModEmbed(MATimeoutAdded, parsed.Author, target, reason, "", "", d, config.GuildID), nil
 		},
 	}, {
 		CustomEnabled: true,
@@ -594,7 +594,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				return nil, err
 			}
 
-			return generateGenericModEmbed(MATimeoutRemoved, parsed.Author, target, reason, "", "", -1), nil
+			return generateGenericModEmbed(MATimeoutRemoved, parsed.Author, target, reason, "", "", -1, config.GuildID), nil
 		},
 	},
 	{
@@ -885,7 +885,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				}
 			}
 
-			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), "", "", 4*7*24*time.Hour), nil
+			return generateGenericModEmbed(MAWarned, parsed.Author, target, parsed.Args[1].Str(), "", "", 4*7*24*time.Hour, config.GuildID), nil
 		},
 	},
 	{
