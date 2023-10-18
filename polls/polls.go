@@ -155,7 +155,7 @@ func startContestRound(data *dcmd.Data) (interface{}, error) {
 		return nil, errors.WrapIf(err, "failed to start contest round")
 	}
 
-	contestRound := &ContestRound{MessageID: msg.ID, ChannelID: msg.ChannelID, GuildID: msg.GuildID, FirstPost: firstPost.Name, SecondPost: secondPost.Name}
+	contestRound := &ContestRound{MessageID: msg.ID, ChannelID: msg.ChannelID, GuildID: data.GuildData.GS.ID, FirstPost: firstPost.Name, SecondPost: secondPost.Name}
 	common.GORM.Model(contestRound).Save(contestRound)
 	go contestRound.handleContestTimer()
 	return "## May the best bot win.", nil

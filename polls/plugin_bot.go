@@ -280,10 +280,18 @@ func (c ContestRound) handleContestTimer() {
 	for {
 		<-ticker.C
 		if time.Since(c.CreatedAt) >= time.Hour*24 {
-			c.Active = common.BoolToPointer(false)
 			err := common.GORM.Model(&c).Preload("Votes").First(&c).Error
-			err = common.GORM.Model(&c).Update(c).Error
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+
 			message, err := common.BotSession.ChannelMessage(c.ChannelID, c.MessageID)
+			if err != nil {
+				logger.Error(err)
+				return
+			}
+
 			message.Embeds[2] = generateContestRoundPollEmbed(message.Embeds[2].Title, c.FirstPost, c.SecondPost, c.Votes, c.CreatedAt.Add(time.Hour*24), true)
 
 			msgEdit := &discordgo.MessageEdit{
@@ -296,6 +304,13 @@ func (c ContestRound) handleContestTimer() {
 			_, err = common.BotSession.ChannelMessageEditComplex(msgEdit)
 			if err != nil {
 				logger.WithError(err).WithField("guild", c.GuildID).Error("failed closing round")
+			}
+
+			c.Active = common.BoolToPointer(false)
+			err = common.GORM.Model(&c).Update(c).Error
+			if err != nil {
+				logger.Error(err)
+				return
 			}
 
 			ticker.Stop()
