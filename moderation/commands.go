@@ -1196,13 +1196,15 @@ var ModerationCommands = []*commands.YAGCommand{
 		IsResponseEphemeral:       true,
 		RequiredArgs:              1,
 		Arguments: []*dcmd.ArgDef{
-			{Name: "User", Help: "The user to add to the watchlist", Type: &commands.MemberArg{}}},
+			{Name: "User", Help: "The user to remove from the watchlist", Type: dcmd.UserID},
+		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			config, _ := GetConfig(parsed.GuildData.GS.ID)
 			watchListChannel, _ := strconv.Atoi(config.WatchListChannel)
-			user := parsed.Args[0].User()
+			userID := parsed.Args[0].Int64()
 
-			watchList := WatchList{UserID: uint64(user.ID)}
+			watchList := WatchList{UserID: uint64(userID)}
+
 			var count int
 			common.GORM.Model(&watchList).Count(&count)
 
@@ -1212,9 +1214,12 @@ var ModerationCommands = []*commands.YAGCommand{
 				common.GORM.Model(&watchList).Association("VerbalWarnings").Delete()
 				common.GORM.Model(&watchList).Delete(watchList)
 				err := common.BotSession.ChannelMessageDelete(int64(watchListChannel), watchList.MessageID)
-				log.Error(err)
 
-				return fmt.Sprintf("%s removed from the watchlist", user.Mention()), nil
+				if err != nil {
+					return nil, err
+				}
+
+				return "User removed from the watchlist.", nil
 			} else {
 				return "User hasn't been added to watchlist yet.", nil
 			}
