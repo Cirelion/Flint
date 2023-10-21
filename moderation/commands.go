@@ -1700,16 +1700,13 @@ var ModerationCommands = []*commands.YAGCommand{
 		IsResponseEphemeral:       true,
 		RequiredArgs:              1,
 		Arguments: []*dcmd.ArgDef{
-			{Name: "User", Help: "The user you want to see the punishments of", Type: &commands.MemberArg{}},
+			{Name: "User", Help: "The user to remove from the watchlist", Type: dcmd.UserID},
 		},
 		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
 			guildID := parsed.GuildData.GS.ID
-			userID := parsed.Args[0].User().ID
+			userID := parsed.Args[0].Int64()
 
 			member, err := bot.GetMember(guildID, userID)
-			if err != nil {
-				return nil, err
-			}
 
 			punishList, err := generatePunishList(guildID, uint64(userID))
 			if err != nil {
@@ -2044,24 +2041,26 @@ func modLogPager(member *dstate.MemberState, p *paginatedmessages.PaginatedMessa
 	if maxNum > count {
 		maxNum = count
 	}
+	watchList := WatchList{UserID: uint64(member.User.ID)}
 
-	embed := &discordgo.MessageEmbed{}
+	common.GORM.Model(&watchList).First(&watchList)
 
-	if member != nil {
-		embed = &discordgo.MessageEmbed{
-			Title: "Moderation logs",
-			Thumbnail: &discordgo.MessageEmbedThumbnail{
-				URL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
-			},
-			Description: fmt.Sprintf("**User**: %s (%d)\n>>> ", member.User.Mention(), member.User.ID),
-		}
-	} else {
-		embed = &discordgo.MessageEmbed{
-			Title:       "Moderation logs",
-			Description: ">>> ",
-		}
+	embed := &discordgo.MessageEmbed{
+		Title: "Moderation logs",
 	}
 
+	if member != nil {
+		embed.Thumbnail = &discordgo.MessageEmbedThumbnail{
+			URL: discordgo.EndpointUserAvatar(member.User.ID, member.User.Avatar),
+		}
+		embed.Description = fmt.Sprintf("**User**: %s (%d)\n", member.User.Mention(), member.User.ID)
+	}
+
+	if watchList.HeadModeratorNote != "" {
+		embed.Description += fmt.Sprintf("**Head Moderator Note**: %s \n", watchList.HeadModeratorNote)
+	}
+
+	embed.Description += "\n>>> "
 	for i := 0 + (5 * (page - 1)); i < maxNum; i++ {
 		entry := modLogEntries[i]
 		embed.Description = embed.Description + fmt.Sprintf("### %s\n **ID**: %d\n **Reason**: %s", entry.Type, entry.ID, entry.Reason)
