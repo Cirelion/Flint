@@ -23,6 +23,10 @@ import (
 	"unicode/utf8"
 )
 
+var (
+	urlRegex = `https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`
+)
+
 type LightDBEntry struct {
 	ID      int64
 	GuildID int64
@@ -2005,11 +2009,130 @@ var ModerationCommands = []*commands.YAGCommand{
 			return fmt.Sprintf("Set On Duty duration to %s", common.HumanizeDuration(common.DurationPrecisionHours, duration)), nil
 		},
 	},
+	{
+		CustomEnabled:             true,
+		CmdCategory:               commands.CategoryModeration,
+		Name:                      "ContestShowcase",
+		Description:               "Showcases the top 3 characters",
+		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
+		RequiredDiscordPermsHelp:  "KickMembers",
+		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
+		ApplicationCommandEnabled: true,
+		DefaultEnabled:            true,
+		IsResponseEphemeral:       true,
+		RequiredArgs:              6,
+		Arguments: []*dcmd.ArgDef{
+			{
+				Name: "1stPlace",
+				Type: dcmd.BigInt,
+				Help: "The ID of the first post for the contest round",
+			},
+			{
+				Name: "1stPlaceColour",
+				Type: dcmd.Int,
+				Help: "The colour of the first post for the contest round",
+			},
+			{
+				Name: "2ndPlace",
+				Type: dcmd.BigInt,
+				Help: "The ID of the second post for the contest round",
+			},
+			{
+				Name: "2ndPlaceColour",
+				Type: dcmd.Int,
+				Help: "The colour of the second post for the contest round",
+			},
+			{
+				Name: "3rdPlace",
+				Type: dcmd.BigInt,
+				Help: "The ID of the second post for the contest round",
+			},
+			{
+				Name: "3rdPlaceColour",
+				Type: dcmd.Int,
+				Help: "The colour of the second post for the contest round",
+			},
+		},
+		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
+			re, _ := regexp.Compile(urlRegex)
+			GS := parsed.GuildData.GS
+
+			firstPost := GS.GetThread(parsed.Args[0].Int64())
+			firstPostMessages, _ := common.BotSession.ChannelMessages(firstPost.ID, 0, 0, 0, 0)
+			firstPostMessage := firstPostMessages[len(firstPostMessages)-1]
+			firstPostUrl := re.FindString(firstPostMessage.Content)
+			firstPlaceColour := parsed.Args[1].Int()
+			firstPlaceEmbed := generateContestWinnerEmbed("1st Place", firstPost.Name, firstPostMessage, firstPostUrl, firstPlaceColour)
+
+			secondPost := GS.GetThread(parsed.Args[2].Int64())
+			secondPostMessages, _ := common.BotSession.ChannelMessages(secondPost.ID, 0, 0, 0, 0)
+			secondPostMessage := secondPostMessages[len(secondPostMessages)-1]
+			secondPostUrl := re.FindString(secondPostMessage.Content)
+			secondPlaceColour := parsed.Args[3].Int()
+			secondPlaceEmbed := generateContestWinnerEmbed("2nd Place", secondPost.Name, secondPostMessage, secondPostUrl, secondPlaceColour)
+
+			thirdPost := GS.GetThread(parsed.Args[4].Int64())
+			thirdPostMessages, _ := common.BotSession.ChannelMessages(thirdPost.ID, 0, 0, 0, 0)
+			thirdPostMessage := thirdPostMessages[len(thirdPostMessages)-1]
+			thirdPostUrl := re.FindString(thirdPostMessage.Content)
+			thirdPlaceColour := parsed.Args[5].Int()
+			thirdPlaceEmbed := generateContestWinnerEmbed("3rd Place", thirdPost.Name, thirdPostMessage, thirdPostUrl, thirdPlaceColour)
+
+			_, err := common.BotSession.ChannelMessageSendComplex(parsed.ChannelID, &discordgo.MessageSend{
+				Content: "__**Halloween Character Creator Winners**__\nCongratulations to our 3 winning bot creators, and thank you all who entered!\n\nWe are very pleased to showcase these characters for you, these creators worked very hard in creating them so please have fun with them!",
+				Embeds:  []*discordgo.MessageEmbed{firstPlaceEmbed, secondPlaceEmbed, thirdPlaceEmbed},
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label: firstPost.Name,
+								URL:   firstPostUrl,
+								Style: discordgo.LinkButton,
+							},
+							discordgo.Button{
+								Label: secondPost.Name,
+								URL:   secondPostUrl,
+								Style: discordgo.LinkButton,
+							},
+							discordgo.Button{
+								Label: thirdPost.Name,
+								URL:   thirdPostUrl,
+								Style: discordgo.LinkButton,
+							},
+						},
+					},
+				},
+			})
+
+			return "Contestants posted successfully", err
+		},
+	},
 }
 
 type EphemeralOrGuild struct {
 	Content string
 	Embed   *discordgo.MessageEmbed
+}
+
+func generateContestWinnerEmbed(title string, postTitle string, message *discordgo.Message, url string, color int) *discordgo.MessageEmbed {
+	embed := &discordgo.MessageEmbed{
+		Title:       title,
+		Description: fmt.Sprintf("### [%s](%s)\n\n %s", postTitle, url, strings.Replace(message.Content, url, "", -1)),
+		Color:       color,
+		Footer: &discordgo.MessageEmbedFooter{
+			Text:    fmt.Sprintf("@%s", message.Author.Username),
+			IconURL: discordgo.EndpointUserAvatar(message.Author.ID, message.Author.Avatar),
+		},
+		Image: &discordgo.MessageEmbedImage{
+			URL:      message.Attachments[0].URL,
+			ProxyURL: message.Attachments[0].ProxyURL,
+			Width:    message.Attachments[0].Width,
+			Height:   message.Attachments[0].Height,
+		},
+	}
+
+	return embed
+
 }
 
 func getMessageReferenceContent(triggerData *dcmd.TraditionalTriggerData) (string, error) {
