@@ -217,6 +217,7 @@ const (
 	MessageFlagsFailedToMentionSomeRolesInThread MessageFlags = 1 << 8
 	// MessageFlagsSuppressNotifications this message will not trigger push and desktop notifications
 	MessageFlagsSuppressNotifications MessageFlags = 1 << 12
+	MessageFlagsIsVoiceMessage        MessageFlags = 1 << 13
 )
 
 // File stores info about files you e.g. send in messages.
@@ -279,13 +280,15 @@ func (m *MessageEdit) SetEmbeds(embeds []*MessageEmbed) *MessageEdit {
 
 // A MessageAttachment stores data for message attachments.
 type MessageAttachment struct {
-	ID       string `json:"id"`
-	URL      string `json:"url"`
-	ProxyURL string `json:"proxy_url"`
-	Filename string `json:"filename"`
-	Width    int    `json:"width"`
-	Height   int    `json:"height"`
-	Size     int    `json:"size"`
+	ID           string  `json:"id"`
+	URL          string  `json:"url"`
+	ProxyURL     string  `json:"proxy_url"`
+	Filename     string  `json:"filename"`
+	Width        int     `json:"width"`
+	Height       int     `json:"height"`
+	Size         int     `json:"size"`
+	DurationSecs float64 `json:"duration_secs"`
+	Waveform     string  `json:"waveform"`
 }
 
 // MessageEmbedFooter is a part of a MessageEmbed struct.

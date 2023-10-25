@@ -228,7 +228,11 @@ func DeleteAndLogMessages(session *discordgo.Session, guildID int64, deleteLogCh
 			return false, fileErr
 		}
 
-		messageSend.Files = []*discordgo.File{{Name: fileName, Reader: file}}
+		if strings.Contains(fileName, ".ogg") {
+			_, err = common.BotSession.ChannelMessageSendComplex(deleteLogChannelID, &discordgo.MessageSend{Files: []*discordgo.File{{Name: fileName, Reader: file}}})
+		} else {
+			messageSend.Files = []*discordgo.File{{Name: fileName, Reader: file}}
+		}
 	}
 
 	if len(message.Content) > 1024 {
