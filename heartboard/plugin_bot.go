@@ -44,7 +44,36 @@ var _ bot.BotInitHandler = (*Plugin)(nil)
 
 func (p *Plugin) BotInit() {
 	eventsystem.AddHandlerAsyncLast(p, p.handleThreadCreate, eventsystem.EventThreadCreate)
+	eventsystem.AddHandlerAsyncLast(p, p.handleThreadDelete, eventsystem.EventMessageDelete)
 	eventsystem.AddHandlerAsyncLastLegacy(p, p.handleReaction, eventsystem.EventMessageReactionAdd, eventsystem.EventMessageReactionRemove)
+}
+
+func (p *Plugin) handleThreadDelete(evt *eventsystem.EventData) (retry bool, err error) {
+	if evt.GS == nil {
+		return false, nil
+	}
+
+	config, err := moderation.GetConfig(evt.GS.ID)
+	if err != nil {
+		return false, err
+	}
+
+	message := evt.MessageDelete()
+	channel := evt.GS.GetThread(message.ChannelID)
+
+	if isValidChannel(channel, config) {
+		messages, messagesErr := common.BotSession.ChannelMessages(channel.ID, 1, message.ID, 0, 0)
+
+		if messagesErr != nil {
+			return false, messagesErr
+		}
+
+		if len(messages) == 0 {
+			common.BotSession.ChannelDelete(message.ChannelID)
+		}
+	}
+
+	return false, nil
 }
 
 func (p *Plugin) handleThreadCreate(evt *eventsystem.EventData) (retry bool, err error) {
