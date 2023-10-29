@@ -2225,7 +2225,9 @@ func generatePunishList(guildID int64, userID uint64) ([]ModLogEntry, error) {
 			return nil, err
 		}
 
-		modLogEntries = append(modLogEntries, ModLogEntry{Type: "Mute", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, Duration: entry.Duration, GivenAt: entry.CreatedAt})
+		if entry.Duration.Seconds() > 0 {
+			modLogEntries = append(modLogEntries, ModLogEntry{Type: "Mute", ID: uint64(entry.ID), Author: member.User, LogLink: entry.LogLink, Reason: entry.Reason, Duration: entry.Duration, GivenAt: entry.CreatedAt})
+		}
 	}
 
 	for _, entry := range modLogs.Kicks {

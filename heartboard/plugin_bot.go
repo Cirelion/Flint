@@ -61,7 +61,7 @@ func (p *Plugin) handleThreadDelete(evt *eventsystem.EventData) (retry bool, err
 	message := evt.MessageDelete()
 	channel := evt.GS.GetThread(message.ChannelID)
 
-	if isValidChannel(channel, config) {
+	if channel != nil && isValidChannel(channel, config) {
 		messages, messagesErr := common.BotSession.ChannelMessages(channel.ID, 1, message.ID, 0, 0)
 
 		if messagesErr != nil {
