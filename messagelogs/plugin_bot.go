@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -30,15 +31,15 @@ func HandleMsgCreate(evt *eventsystem.EventData) (retry bool, err error) {
 	if evt.GS == nil {
 		return false, nil
 	}
-
 	config, err := moderation.GetConfig(evt.GS.ID)
 	if err != nil {
 		return false, err
 	}
 	msg := evt.MessageCreate()
 	channel := evt.GS.GetChannelOrThread(msg.ChannelID)
+	re, _ := regexp.Compile("^(?:[^<]|\\A)https://(?:\\w+\\.)?discord(?:app)?\\.com/channels\\/(\\d+)\\/(\\d+)\\/(\\d+)(?:[^>\\d]|\\z)$")
 
-	if IsIgnoredChannel(config, channel.ID, channel.ParentID) || msg.Author.Bot {
+	if IsIgnoredChannel(config, channel.ID, channel.ParentID) || msg.Author.Bot || re.MatchString(msg.Content) {
 		return false, nil
 	}
 
