@@ -24,6 +24,10 @@ var Command = &commands.YAGCommand{
 		guildID := data.GuildData.GS.ID
 		config, err := moderation.GetConfig(guildID)
 		duration := data.Args[0].Value.(time.Duration)
+		if duration.Hours() > 24 {
+			return "Can't set yourself to sleep for more than 24 hours!", nil
+		}
+
 		member, err := bot.GetMember(guildID, data.Author.ID)
 		if err != nil {
 			return nil, err
