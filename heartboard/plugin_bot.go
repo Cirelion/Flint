@@ -157,6 +157,7 @@ func (p *Plugin) handleReaction(evt *eventsystem.EventData) {
 	if isValidChannel(channel, config) {
 		handleHeartBoard(config, channel, reaction)
 	} else if reaction.Emoji.Name == "⭐" || reaction.Emoji.Name == "❌" {
+		logger.Warn("STAR: ", time.Now(), reaction)
 		p.handleStarBoard(config, reaction)
 	}
 }
@@ -299,9 +300,8 @@ func (p *Plugin) handleStarBoard(config *moderation.Config, reaction *discordgo.
 			err = common.BotSession.ChannelMessageDelete(config.StarBoardChannel, memberQuote.StarBoardMessageID)
 			if err != nil {
 				logger.Error(err)
-				p.Unlock()
-				return
 			}
+
 			memberQuote.StarBoardMessageID = 1
 		}
 
