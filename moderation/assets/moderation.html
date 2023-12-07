@@ -405,8 +405,8 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
     <li>You can ban using user ids (even if they left the server)</li>
     <li>You can put a duration on the bans</li>
 </ul>
-<p>Note that the bans themselves are on discord. To unban someone you can run the unban command 
-    <code>unban @user somereason</code> or <code> unban 1034924032 somereason</code> or go into 
+<p>Note that the bans themselves are on discord. To unban someone you can run the unban command
+    <code>unban @user somereason</code> or <code> unban 1034924032 somereason</code> or go into
     your banlist on discord and unban them.</p>
 <div class="row">
     <div class="col-sm">
@@ -507,45 +507,6 @@ the punishment, is an <a href="https://docs.yagpdb.xyz/reference/templates#user"
 {{end}}
 
 {{define "moderation_messages"}}
-<p>On Duty configuration</p>
-<div class="row">
-    <div class="col-sm-12">
-        <div class="form-group">
-            <label>On Duty role</label>
-            <select class="form-control" name="OnDutyRole">
-                {{roleOptions .ActiveGuild.Roles .HighestRole .ModConfig.OnDutyRole "None"}}
-            </select>
-        </div>
-        <hr />
-    </div>
-    <div class="col-sm-6 col-md-3">
-        <div class="form-group" >
-            <label>On Duty channel 1</label><br>
-            <select class="form-control" name="OnDutyChannelOne">
-                {{textChannelOptions .ActiveGuild.Channels .ModConfig.OnDutyChannelOne true "None"}}
-            </select>
-        </div>
-        <div class="form-group">
-            <label>On Duty channel 1 description</label>
-            <textarea rows="1" class="form-control" name="OnDutyChannelOneDescription">{{or .ModConfig.OnDutyChannelOneDescription ""}}</textarea>
-        </div>
-    </div>
-    <hr />
-    <div class="col-sm-6 col-md-3">
-        <div class="form-group" >
-            <label>On Duty channel 2</label><br>
-            <select class="form-control" name="OnDutyChannelTwo">
-                {{textChannelOptions .ActiveGuild.Channels .ModConfig.OnDutyChannelTwo true "None"}}
-            </select>
-        </div>
-        <div class="form-group">
-            <label>On Duty channel 2 description</label>
-            <textarea rows="1" class="form-control" name="OnDutyChannelTwoDescription">{{or .ModConfig.OnDutyChannelTwoDescription ""}}</textarea>
-        </div>
-    </div>
-</div>
-<hr />
-
 <p>Application configuration</p>
 <div class="row">
     <div class="col-sm-6 col-md-3">

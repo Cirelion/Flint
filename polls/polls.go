@@ -66,7 +66,7 @@ var (
 		CmdCategory:               commands.CategoryTool,
 		Name:                      "ContestRound",
 		Description:               "Starts a contest between 2 participants",
-		RequiredArgs:              3,
+		RequiredArgs:              4,
 		RequireDiscordPerms:       []int64{discordgo.PermissionManageMessages},
 		RequiredDiscordPermsHelp:  "ManageMessages",
 		ApplicationCommandEnabled: true,
@@ -85,6 +85,11 @@ var (
 				Name: "SecondPost",
 				Type: dcmd.BigInt,
 				Help: "The ID of the second post for the contest round",
+			},
+			{
+				Name: "Color",
+				Type: dcmd.BigInt,
+				Help: "The accent colour of the embed",
 			},
 		},
 		RunFunc: startContestRound,
@@ -128,6 +133,8 @@ func startContestRound(data *dcmd.Data) (interface{}, error) {
 	firstEmbed := generateContestRoundEmbed(firstPost, firstPostMessages[len(firstPostMessages)-1])
 	secondEmbed := generateContestRoundEmbed(secondPost, secondPostMessages[len(secondPostMessages)-1])
 	pollEmbed := generateContestRoundPollEmbed(roundTitle, firstPost.Name, secondPost.Name, []Vote{}, time.Now().Add(time.Hour*24), false)
+	pollEmbed.Color = data.Args[3].Int()
+
 	firstPostCustomID := fmt.Sprintf("contest_round_%s", firstPost.Name)
 	secondPostCustomID := fmt.Sprintf("contest_round_%s", secondPost.Name)
 
@@ -486,7 +493,6 @@ func generateContestRoundPollEmbed(roundTitle string, firstPost string, secondPo
 		Title:       roundTitle,
 		Description: description,
 		Timestamp:   timeStamp.Format(time.RFC3339),
-		Color:       13265188,
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: footerText,
 		},

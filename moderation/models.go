@@ -78,13 +78,6 @@ type Config struct {
 	ContestChannel      int64 `valid:"channel,true"`
 	ContestRoundChannel int64 `valid:"channel,true"`
 
-	//On Duty
-	OnDutyRole                  string `valid:"role,true"`
-	OnDutyChannelOne            string `valid:"channel,true"`
-	OnDutyChannelOneDescription string `valid:"template,5000"`
-	OnDutyChannelTwo            string `valid:"channel,true"`
-	OnDutyChannelTwoDescription string `valid:"template,5000"`
-
 	//Applications
 	ConversationSubmissionChannel   string `valid:"channel,true"`
 	ModApplicationSubmissionChannel string `valid:"channel,true"`
@@ -122,20 +115,6 @@ func (c *Config) IntModApplicationSubmissionChannel() (r int64) {
 }
 func (c *Config) IntEventSubmissionChannel() (r int64) {
 	r, _ = strconv.ParseInt(c.EventSubmissionChannel, 10, 64)
-	return
-}
-
-func (c *Config) IntOnDutyRole() (r int64) {
-	r, _ = strconv.ParseInt(c.OnDutyRole, 10, 64)
-	return
-}
-
-func (c *Config) IntOnDutyChannelOne() (r int64) {
-	r, _ = strconv.ParseInt(c.OnDutyChannelOne, 10, 64)
-	return
-}
-func (c *Config) IntOnDutyChannelTwo() (r int64) {
-	r, _ = strconv.ParseInt(c.OnDutyChannelTwo, 10, 64)
 	return
 }
 
@@ -341,20 +320,4 @@ type MuteModel struct {
 
 func (m *MuteModel) TableName() string {
 	return "muted_users"
-}
-
-func (o OnDuty) TableName() string {
-	return "on_duty"
-}
-
-type OnDuty struct {
-	UserID  uint64 `gorm:"primary_key" json:"user_id"`
-	GuildID int64  `gorm:"index" json:"guild_id"`
-
-	OnDuty         bool
-	OnDutyDuration time.Duration
-	OnDutySetAt    time.Time
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }

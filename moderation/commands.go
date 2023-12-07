@@ -1601,7 +1601,7 @@ var ModerationCommands = []*commands.YAGCommand{
 		CmdCategory:               commands.CategoryModeration,
 		Name:                      "PingActiveWatchlistedUser",
 		Aliases:                   []string{"watchlistping"},
-		Description:               "Ping on duty in the watchlist channel",
+		Description:               "Ping moderators in the watchlist channel",
 		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
 		RequiredDiscordPermsHelp:  "KickMembers",
 		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
@@ -1628,7 +1628,7 @@ var ModerationCommands = []*commands.YAGCommand{
 				if time.Since(watchList.LastPingedAt).Hours() > 2 {
 					message, err := common.BotSession.ChannelMessageSendComplex(int64(watchListChannel), &discordgo.MessageSend{
 						AllowedMentions: discordgo.AllowedMentions{Parse: []discordgo.AllowedMentionType{discordgo.AllowedMentionTypeRoles}},
-						Content:         fmt.Sprintf("<@&1142548147600638022>\n Watchlisted member %s is active in channel: <#%s>", user.Mention(), channelID),
+						Content:         fmt.Sprintf("<@&1119600856422158368>, <@&1114337477948358716>\n Watchlisted member %s is active in channel: <#%s>", user.Mention(), channelID),
 					})
 
 					if err != nil {
@@ -1873,143 +1873,6 @@ var ModerationCommands = []*commands.YAGCommand{
 		},
 	},
 	{
-		CmdCategory:               commands.CategoryModeration,
-		Name:                      "On Duty",
-		DefaultEnabled:            true,
-		ApplicationCommandEnabled: true,
-		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
-		RequiredDiscordPermsHelp:  "KickMembers",
-		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:       true,
-		ApplicationCommandType:    3,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			guildID := parsed.GuildData.GS.ID
-			config, err := GetConfig(guildID)
-			member, err := bot.GetMember(guildID, parsed.Author.ID)
-
-			if err != nil {
-				return nil, err
-			}
-			onDuty := &OnDuty{UserID: uint64(member.User.ID)}
-			err = common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
-			if err != nil {
-				return nil, err
-			}
-
-			if common.ContainsInt64Slice(member.Member.Roles, config.IntOnDutyRole()) {
-				err = common.BotSession.GuildMemberRoleRemove(guildID, member.User.ID, config.IntOnDutyRole())
-				onDuty.OnDuty = false
-			} else {
-				err = common.BotSession.GuildMemberRoleAdd(guildID, member.User.ID, config.IntOnDutyRole())
-				onDuty.OnDuty = true
-				onDuty.OnDutySetAt = time.Now()
-			}
-
-			if err != nil {
-				return nil, err
-			}
-
-			err = common.GORM.Model(onDuty).Update(onDuty).Error
-			if err != nil {
-				return nil, err
-			}
-
-			if onDuty.OnDuty {
-				return "You are now On Duty!", nil
-			}
-
-			return "You are now Off Duty!", nil
-		},
-	},
-	{
-		CmdCategory:               commands.CategoryModeration,
-		Name:                      "Set Off Duty",
-		DefaultEnabled:            true,
-		ApplicationCommandEnabled: true,
-		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
-		RequiredDiscordPermsHelp:  "KickMembers",
-		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
-		IsResponseEphemeral:       true,
-		ApplicationCommandType:    2,
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			userID := parsed.SlashCommandTriggerData.Interaction.DataCommand.TargetID
-			guildID := parsed.GuildData.GS.ID
-
-			config, err := GetConfig(guildID)
-			member, err := bot.GetMember(guildID, userID)
-			if err != nil {
-				return nil, err
-			}
-
-			onDuty := &OnDuty{UserID: uint64(member.User.ID)}
-			err = common.GORM.Model(onDuty).First(onDuty).Error
-			if err != nil {
-				return "User has never gone On Duty.", err
-			}
-
-			if common.ContainsInt64Slice(member.Member.Roles, config.IntOnDutyRole()) {
-				err = common.BotSession.GuildMemberRoleRemove(guildID, member.User.ID, config.IntOnDutyRole())
-				onDuty.OnDuty = false
-				if err != nil {
-					return "Something went wrong trying to remove the role.", err
-				}
-
-				err = common.GORM.Model(onDuty).Update(onDuty).Error
-				if err != nil {
-					return nil, err
-				}
-
-				err = bot.SendDM(userID, fmt.Sprintf("You have been set Off Duty by %s", parsed.Author.Mention()))
-				if err != nil {
-					return "Error trying to send DM informing the member that was set Off Duty.", err
-				}
-
-				return fmt.Sprintf("%s set Off Duty!", member.User.Mention()), nil
-			} else {
-				return fmt.Sprintf("%s is already Off Duty!", member.User.Mention()), nil
-			}
-		},
-	},
-	{
-		CustomEnabled:             true,
-		CmdCategory:               commands.CategoryModeration,
-		Name:                      "SetOnDutyDuration",
-		Description:               "Sets the duration until you are automatically put off duty.",
-		RequireDiscordPerms:       []int64{discordgo.PermissionKickMembers},
-		RequiredDiscordPermsHelp:  "KickMembers",
-		RequireBotPerms:           [][]int64{{discordgo.PermissionManageChannels}},
-		ApplicationCommandEnabled: true,
-		DefaultEnabled:            true,
-		IsResponseEphemeral:       true,
-		RequiredArgs:              1,
-		Arguments: []*dcmd.ArgDef{
-			{Name: "Duration", Type: &commands.DurationArg{}},
-		},
-		RunFunc: func(parsed *dcmd.Data) (interface{}, error) {
-			guildID := parsed.GuildData.GS.ID
-			config, err := GetConfig(guildID)
-			duration := parsed.Args[0].Value.(time.Duration)
-			onDuty := &OnDuty{UserID: uint64(parsed.Author.ID)}
-
-			err = common.GORM.Model(onDuty).FirstOrCreate(onDuty).Error
-			if err != nil {
-				return nil, err
-			}
-
-			onDuty.OnDuty = true
-			onDuty.OnDutyDuration = duration
-			onDuty.OnDutySetAt = time.Now()
-
-			err = common.GORM.Model(onDuty).Update(&onDuty).Error
-			err = common.BotSession.GuildMemberRoleAdd(parsed.GuildData.GS.ID, parsed.Author.ID, config.IntOnDutyRole())
-			if err != nil {
-				return nil, err
-			}
-
-			return fmt.Sprintf("Set On Duty duration to %s", common.HumanizeDuration(common.DurationPrecisionHours, duration)), nil
-		},
-	},
-	{
 		CustomEnabled:             true,
 		CmdCategory:               commands.CategoryModeration,
 		Name:                      "ContestShowcase",
@@ -2079,7 +1942,7 @@ var ModerationCommands = []*commands.YAGCommand{
 			thirdPlaceEmbed := generateContestWinnerEmbed("3rd Place", thirdPost.Name, thirdPostMessage, thirdPostUrl, thirdPlaceColour)
 
 			_, err := common.BotSession.ChannelMessageSendComplex(parsed.ChannelID, &discordgo.MessageSend{
-				Content: "__**Halloween Character Creator Winners**__\nCongratulations to our 3 winning bot creators, and thank you all who entered!\n\nWe are very pleased to showcase these characters for you, these creators worked very hard in creating them so please have fun with them!",
+				Content: "__**December Character Creator Winners**__\nCongratulations to our 3 winning bot creators, and thank you all who entered!\n\nWe are very pleased to showcase these characters for you, these creators worked very hard in creating them so please have fun with them!",
 				Embeds:  []*discordgo.MessageEmbed{firstPlaceEmbed, secondPlaceEmbed, thirdPlaceEmbed},
 				Components: []discordgo.MessageComponent{
 					discordgo.ActionsRow{
