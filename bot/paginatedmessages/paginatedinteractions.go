@@ -10,11 +10,6 @@ import (
 	"github.com/cirelion/flint/lib/discordgo"
 )
 
-const (
-	EmojiNext = "▶"
-	EmojiPrev = "◀"
-)
-
 var (
 	activePaginatedMessagesMap = make(map[int64]*PaginatedMessage)
 	paginationNext             = "pagination_next"
@@ -77,13 +72,13 @@ func createNavigationButtons(prevDisabled bool, nextDisabled bool) []discordgo.M
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
 				discordgo.Button{
-					Label:    EmojiPrev,
+					Emoji:    discordgo.ComponentEmoji{Name: "◀"},
 					Style:    discordgo.PrimaryButton,
 					Disabled: prevDisabled,
 					CustomID: paginationPrev,
 				},
 				discordgo.Button{
-					Label:    EmojiNext,
+					Emoji:    discordgo.ComponentEmoji{Name: "▶"},
 					Style:    discordgo.PrimaryButton,
 					Disabled: nextDisabled,
 					CustomID: paginationNext,

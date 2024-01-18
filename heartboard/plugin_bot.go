@@ -119,6 +119,7 @@ func (p *Plugin) handleThreadCreate(evt *eventsystem.EventData) (retry bool, err
 							Style: discordgo.LinkButton,
 							URL:   websiteUrl,
 							Label: label,
+							Emoji: discordgo.ComponentEmoji{Name: "💬"},
 						},
 					},
 				},
