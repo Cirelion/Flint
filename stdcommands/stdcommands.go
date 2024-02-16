@@ -5,6 +5,7 @@ import (
 	"github.com/cirelion/flint/bot/eventsystem"
 	"github.com/cirelion/flint/commands"
 	"github.com/cirelion/flint/common"
+	_break "github.com/cirelion/flint/stdcommands/break"
 	"github.com/cirelion/flint/stdcommands/viewperms"
 
 	//"github.com/cirelion/flint/stdcommands/advice"
@@ -36,7 +37,7 @@ import (
 	"github.com/cirelion/flint/stdcommands/listroles"
 	"github.com/cirelion/flint/stdcommands/memstats"
 	"github.com/cirelion/flint/stdcommands/ping"
-	//"github.com/cirelion/flint/stdcommands/roast"
+
 	"github.com/cirelion/flint/stdcommands/roll"
 	"github.com/cirelion/flint/stdcommands/setstatus"
 	"github.com/cirelion/flint/stdcommands/simpleembed"
@@ -47,14 +48,14 @@ import (
 	"github.com/cirelion/flint/stdcommands/toggledbg"
 	"github.com/cirelion/flint/stdcommands/topcommands"
 	"github.com/cirelion/flint/stdcommands/topevents"
-	//"github.com/cirelion/flint/stdcommands/topgames"
+
 	"github.com/cirelion/flint/stdcommands/topic"
-	//"github.com/cirelion/flint/stdcommands/topservers"
+
 	"github.com/cirelion/flint/stdcommands/unbanserver"
 	"github.com/cirelion/flint/stdcommands/undelete"
-	//"github.com/cirelion/flint/stdcommands/weather"
+
 	"github.com/cirelion/flint/stdcommands/wouldyourather"
-	//"github.com/cirelion/flint/stdcommands/xkcd"
+
 	"github.com/cirelion/flint/stdcommands/yagstatus"
 )
 
@@ -126,6 +127,7 @@ func (p *Plugin) AddCommands() {
 		findserver.Command,
 		dcallvoice.Command,
 		ccreqs.Command,
+		_break.Command,
 		sleep.Command,
 		toggledbg.Command,
 		globalrl.Command,
