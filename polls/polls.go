@@ -399,7 +399,7 @@ func PollEmbed(question string, author *discordgo.User, votes []Vote) (*discordg
 	embed := discordgo.MessageEmbed{
 		Title:       question,
 		Color:       0x65f442,
-		Description: fmt.Sprintf("<:Check:1153636410771906630> `%d %s (%d%s)` <:Cross:1153636407714271252> `%d %s (%d%s)`", yay, yayVoteString, int(yayPercentage), "%", nay, nayVoteString, int(nayPercentage), "%"),
+		Description: fmt.Sprintf("<:Check:1247310020102721688> `%d %s (%d%s)` <:Cross:1247309988129669312> `%d %s (%d%s)`", yay, yayVoteString, int(yayPercentage), "%", nay, nayVoteString, int(nayPercentage), "%"),
 		Footer: &discordgo.MessageEmbedFooter{
 			Text:    fmt.Sprintf("Asked by %s", author.Globalname),
 			IconURL: discordgo.EndpointUserAvatar(author.ID, author.Avatar),
