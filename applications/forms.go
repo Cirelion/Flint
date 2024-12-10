@@ -19,10 +19,11 @@ var (
 
 var (
 	movieHostQuestion1 = "Do you have good, stable, reliable internet?"
-	movieHostQuestion2 = "Have you successfully streamed movies before?"
-	movieHostQuestion3 = "What streaming services do you have?"
-	movieHostQuestion4 = "What days and time (UTC) are you available?"
-	movieHostQuestion5 = "When wouldn't you be able to stream?"
+	movieHostQuestion2 = "Have you successfully streamed movies/games before?"
+	movieHostQuestion3 = "What party games do you have?"
+	movieHostQuestion4 = "What streaming services do you have?"
+	movieHostQuestion5 = "What days and time (UTC) are you available?"
+	movieHostQuestion6 = "When wouldn't you be able to stream?"
 )
 
 func startMiniModModal(ic *discordgo.InteractionCreate, session *discordgo.Session) {
@@ -196,7 +197,7 @@ func startMovieHostModal(ic *discordgo.InteractionCreate, session *discordgo.Ses
 							CustomID:  movieHostQuestion3,
 							Label:     movieHostQuestion3,
 							Style:     discordgo.TextInputShort,
-							Required:  true,
+							Required:  false,
 							MaxLength: 50,
 						},
 					},
@@ -218,7 +219,18 @@ func startMovieHostModal(ic *discordgo.InteractionCreate, session *discordgo.Ses
 							CustomID:  movieHostQuestion5,
 							Label:     movieHostQuestion5,
 							Style:     discordgo.TextInputParagraph,
-							Required:  false,
+							Required:  true,
+							MaxLength: 200,
+						},
+					},
+				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  movieHostQuestion6,
+							Label:     movieHostQuestion6,
+							Style:     discordgo.TextInputParagraph,
+							Required:  true,
 							MaxLength: 200,
 						},
 					},
