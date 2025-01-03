@@ -29,8 +29,6 @@ type FunSetting struct {
 	DadJokes   string `boil:"dad_jokes" json:"dad_jokes" toml:"dad_jokes" yaml:"dad_jokes"`
 	Wyrs       string `boil:"wyrs" json:"wyrs" toml:"wyrs" yaml:"wyrs"`
 	NSFWWyrs   string `boil:"nsfw_wyrs" json:"nsfw_wyrs" toml:"nsfw_wyrs" yaml:"nsfw_wyrs"`
-	PChannel   int64  `boil:"p_channel" json:"p_channel" toml:"p_channel" yaml:"p_channel"`
-	PRole      int64  `boil:"p_role" json:"p_role" toml:"p_role" yaml:"p_role"`
 
 	R *funSettingR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L funSettingL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -43,8 +41,6 @@ var FunSettingColumns = struct {
 	DadJokes   string
 	Wyrs       string
 	NSFWWyrs   string
-	PChannel   string
-	PRole      string
 }{
 	GuildID:    "guild_id",
 	Topics:     "topics",
@@ -52,8 +48,6 @@ var FunSettingColumns = struct {
 	DadJokes:   "dad_jokes",
 	Wyrs:       "wyrs",
 	NSFWWyrs:   "nsfw_wyrs",
-	PChannel:   "p_channel",
-	PRole:      "p_role",
 }
 
 var FunSettingTableColumns = struct {
@@ -63,8 +57,6 @@ var FunSettingTableColumns = struct {
 	DadJokes   string
 	Wyrs       string
 	NSFWWyrs   string
-	PChannel   string
-	PRole      string
 }{
 	GuildID:    "fun_settings.guild_id",
 	Topics:     "fun_settings.topics",
@@ -72,8 +64,6 @@ var FunSettingTableColumns = struct {
 	DadJokes:   "fun_settings.dad_jokes",
 	Wyrs:       "fun_settings.wyrs",
 	NSFWWyrs:   "fun_settings.nsfw_wyrs",
-	PChannel:   "fun_settings.p_channel",
-	PRole:      "fun_settings.p_role",
 }
 
 // Generated where
@@ -131,8 +121,6 @@ var FunSettingWhere = struct {
 	DadJokes   whereHelperstring
 	Wyrs       whereHelperstring
 	NSFWWyrs   whereHelperstring
-	PChannel   whereHelperint64
-	PRole      whereHelperint64
 }{
 	GuildID:    whereHelperint64{field: "\"fun_settings\".\"guild_id\""},
 	Topics:     whereHelperstring{field: "\"fun_settings\".\"topics\""},
@@ -140,8 +128,6 @@ var FunSettingWhere = struct {
 	DadJokes:   whereHelperstring{field: "\"fun_settings\".\"dad_jokes\""},
 	Wyrs:       whereHelperstring{field: "\"fun_settings\".\"wyrs\""},
 	NSFWWyrs:   whereHelperstring{field: "\"fun_settings\".\"nsfw_wyrs\""},
-	PChannel:   whereHelperint64{field: "\"fun_settings\".\"p_channel\""},
-	PRole:      whereHelperint64{field: "\"fun_settings\".\"p_role\""},
 }
 
 // FunSettingRels is where relationship names are stored.
@@ -161,9 +147,9 @@ func (*funSettingR) NewStruct() *funSettingR {
 type funSettingL struct{}
 
 var (
-	funSettingAllColumns            = []string{"guild_id", "topics", "nsfw_topics", "dad_jokes", "wyrs", "nsfw_wyrs", "p_channel", "p_role"}
+	funSettingAllColumns            = []string{"guild_id", "topics", "nsfw_topics", "dad_jokes", "wyrs", "nsfw_wyrs"}
 	funSettingColumnsWithoutDefault = []string{"guild_id", "topics", "nsfw_topics", "dad_jokes", "wyrs", "nsfw_wyrs"}
-	funSettingColumnsWithDefault    = []string{"p_channel", "p_role"}
+	funSettingColumnsWithDefault    = []string{}
 	funSettingPrimaryKeyColumns     = []string{"guild_id"}
 	funSettingGeneratedColumns      = []string{}
 )

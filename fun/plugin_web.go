@@ -23,8 +23,6 @@ type FunConfigForm struct {
 	DadJokes   string
 	Wyrs       string
 	NSFWWyrs   string
-	PChannel   int64
-	PRole      int64
 }
 
 var (
@@ -38,8 +36,6 @@ func (p FunConfigForm) FunSetting() *models.FunSetting {
 		DadJokes:   p.DadJokes,
 		Wyrs:       p.Wyrs,
 		NSFWWyrs:   p.NSFWWyrs,
-		PChannel:   p.PChannel,
-		PRole:      p.PRole,
 	}
 }
 
@@ -94,8 +90,6 @@ func HandlePostFunSettings(w http.ResponseWriter, r *http.Request) (templateData
 		"dad_jokes",
 		"wyrs",
 		"nsfw_wyrs",
-		"p_channel",
-		"p_role",
 	), boil.Infer())
 
 	if err == nil {

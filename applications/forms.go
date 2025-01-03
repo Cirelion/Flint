@@ -14,16 +14,16 @@ var (
 	movieSuggestionQuestion1 = "Movie title"
 	movieSuggestionQuestion2 = "Movie genre(s)"
 	movieSuggestionQuestion3 = "Where is it streamable?"
-	movieSuggestionQuestion4 = "Description of movie/why you want to watch it"
+	movieSuggestionQuestion4 = "Description of the movie"
+	movieSuggestionQuestion5 = "Why do you want to watch this movie"
 )
 
 var (
 	movieHostQuestion1 = "Do you have good, stable, reliable internet?"
-	movieHostQuestion2 = "Have you successfully streamed movies/games before?"
+	movieHostQuestion2 = "Have you streamed movies/games before?"
 	movieHostQuestion3 = "What party games do you have?"
 	movieHostQuestion4 = "What streaming services do you have?"
 	movieHostQuestion5 = "What days and time (UTC) are you available?"
-	movieHostQuestion6 = "When wouldn't you be able to stream?"
 )
 
 func startMiniModModal(ic *discordgo.InteractionCreate, session *discordgo.Session) {
@@ -151,6 +151,17 @@ func startMovieSuggestionModal(ic *discordgo.InteractionCreate, session *discord
 						},
 					},
 				},
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID:  movieSuggestionQuestion5,
+							Label:     movieSuggestionQuestion5,
+							Style:     discordgo.TextInputParagraph,
+							Required:  false,
+							MaxLength: 200,
+						},
+					},
+				},
 			},
 			Flags: 64,
 		},
@@ -218,17 +229,6 @@ func startMovieHostModal(ic *discordgo.InteractionCreate, session *discordgo.Ses
 						discordgo.TextInput{
 							CustomID:  movieHostQuestion5,
 							Label:     movieHostQuestion5,
-							Style:     discordgo.TextInputParagraph,
-							Required:  true,
-							MaxLength: 200,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  movieHostQuestion6,
-							Label:     movieHostQuestion6,
 							Style:     discordgo.TextInputParagraph,
 							Required:  true,
 							MaxLength: 200,
